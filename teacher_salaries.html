@@ -282,15 +282,24 @@
                     </td>
                     <td>
                         <div style="display:grid; gap:0.45rem;">
-                            <input type="number" min="0" step="0.01" value="${breakdown.lateFine}" placeholder="Late fine"
-                                style="padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
-                                onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'lateFine', this.value)">
-                            <input type="number" min="0" step="0.01" value="${breakdown.leaveDeduction}" placeholder="Leave deduction"
-                                style="padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
-                                onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'leaveDeduction', this.value)">
-                            <input type="number" min="0" step="0.01" value="${breakdown.otherDeduction}" placeholder="Other deduction"
-                                style="padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
-                                onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'otherDeduction', this.value)">
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="min-width:110px; font-size:0.74rem; color:var(--text-secondary); font-weight:600;">Late Fine</span>
+                                <input type="number" min="0" step="0.01" value="${breakdown.lateFine}" placeholder="0"
+                                    style="flex:1; padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
+                                    onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'lateFine', this.value)">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="min-width:110px; font-size:0.74rem; color:var(--text-secondary); font-weight:600;">Leave Deduction</span>
+                                <input type="number" min="0" step="0.01" value="${breakdown.leaveDeduction}" placeholder="0"
+                                    style="flex:1; padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
+                                    onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'leaveDeduction', this.value)">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="min-width:110px; font-size:0.74rem; color:var(--text-secondary); font-weight:600;">Other Deduction</span>
+                                <input type="number" min="0" step="0.01" value="${breakdown.otherDeduction}" placeholder="0"
+                                    style="flex:1; padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
+                                    onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'otherDeduction', this.value)">
+                            </div>
                             <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Total: PKR ${breakdown.totalDeduction.toLocaleString()}</div>
                         </div>
                     </td>

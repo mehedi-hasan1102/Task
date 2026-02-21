@@ -178,7 +178,7 @@
                 <div style="text-align: right;">
                     <div
                         style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">
-                        Total Monthly Payout</div>
+                        Total Monthly Payout (After Tax)</div>
                     <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);"
                         id="monthlyTotalDisplay">PKR 0</div>
                 </div>
@@ -189,7 +189,9 @@
                     <thead>
                         <tr>
                             <th>Teacher Name</th>
-                            <th>Monthly Salary</th>
+                            <th>Net Salary (After Tax)</th>
+                            <th>Salary Deduction</th>
+                            <th>Final Payable</th>
                             <th>Status</th>
                             <th>Payment Date</th>
                             <th style="text-align: right;">Actions</th>
@@ -251,11 +253,14 @@
 
             filtered.forEach(t => {
                 const recordKey = `${t.id}_${monthKey}`;
-                const payment = salaryRecords[recordKey];
-                const isPaid = !!payment;
-                const salaryAmount = parseInt(t.salary) || 0;
+                const payment = salaryRecords[recordKey] || {};
+                const isPaid = !!(payment && payment.paid !== false);
+                const breakdown = calculateTeacherSalaryBreakdown(t, payment);
 
-                if (isPaid) totalPaid += salaryAmount;
+                if (isPaid) {
+                    const recordedFinal = Number(payment.finalPayable);
+                    totalPaid += Number.isFinite(recordedFinal) ? recordedFinal : breakdown.finalPayable;
+                }
 
                 const tr = document.createElement('tr');
                 tr.className = 'salary-row';
@@ -271,7 +276,27 @@
                             </div>
                         </div>
                     </td>
-                    <td style="font-weight:700; color:var(--text-primary);">PKR ${salaryAmount.toLocaleString()}</td>
+                    <td style="font-weight:700; color:var(--text-primary);">
+                        PKR ${breakdown.netAfterTax.toLocaleString()}
+                        <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:500;">Gross ${breakdown.grossSalary.toLocaleString()} • Tax ${breakdown.taxPercent}%</div>
+                    </td>
+                    <td>
+                        <div style="display:grid; gap:0.45rem;">
+                            <input type="number" min="0" step="0.01" value="${breakdown.lateFine}" placeholder="Late fine"
+                                style="padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
+                                onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'lateFine', this.value)">
+                            <input type="number" min="0" step="0.01" value="${breakdown.leaveDeduction}" placeholder="Leave deduction"
+                                style="padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
+                                onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'leaveDeduction', this.value)">
+                            <input type="number" min="0" step="0.01" value="${breakdown.otherDeduction}" placeholder="Other deduction"
+                                style="padding:0.35rem 0.5rem; border:1px solid var(--border-color); border-radius:0.4rem; font-size:0.78rem;"
+                                onchange="updateSalaryDeduction('${t.id}', '${monthKey}', 'otherDeduction', this.value)">
+                            <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Total: PKR ${breakdown.totalDeduction.toLocaleString()}</div>
+                        </div>
+                    </td>
+                    <td style="font-weight:700; color:var(--text-primary);">
+                        PKR ${breakdown.finalPayable.toLocaleString()}
+                    </td>
                     <td>
                         <span class="${isPaid ? 'status-paid-badge' : 'status-unpaid-badge'}">
                             ${isPaid ? 'Paid' : 'Unpaid'}
@@ -280,8 +305,8 @@
                     <td>
                         ${isPaid ? `
                             <div class="payment-date-info">
-                                <span>${payment.date}</span>
-                                <span>at ${payment.time}</span>
+                                <span>${payment.date || '--'}</span>
+                                <span>at ${payment.time || '--'}</span>
                             </div>
                         ` : '<span style="color:var(--text-secondary); font-style:italic;">--</span>'}
                     </td>

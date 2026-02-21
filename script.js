@@ -42,6 +42,11 @@ if (typeof io !== 'undefined') {
         if (window.location.pathname.includes('teachers.html')) renderTeachers();
     });
 
+    socket.on('staff_update', (data) => {
+        localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(data));
+        if (window.location.pathname.includes('staff.html')) renderStaff();
+    });
+
     socket.on('notices_update', (data) => {
         localStorage.setItem(STORAGE_KEY_NOTICES, JSON.stringify(data));
         if (window.location.pathname.includes('notices.html')) renderNotices();
@@ -108,6 +113,89 @@ function readFileAsDataURL(file) {
     });
 }
 
+function toNumber(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizePercent(value) {
+    const percent = toNumber(value);
+    if (percent < 0) return 0;
+    if (percent > 100) return 100;
+    return percent;
+}
+
+function calculateFeeWithTax(baseFee, taxPercent) {
+    const base = toNumber(baseFee);
+    const tax = normalizePercent(taxPercent);
+    return base + (base * tax / 100);
+}
+
+function calculateSalaryAfterTax(grossSalary, taxPercent) {
+    const gross = toNumber(grossSalary);
+    const tax = normalizePercent(taxPercent);
+    return gross - (gross * tax / 100);
+}
+
+function getStudentMonthlyFeeTotal(student) {
+    const monthlyFee = toNumber(student.monthlyFee);
+    const baseFee = toNumber(student.fees);
+    const taxPercent = normalizePercent(student.feeTax ?? student.tax);
+    const calculated = calculateFeeWithTax(baseFee || monthlyFee, taxPercent);
+
+    if (monthlyFee > 0 && (baseFee <= 0 || Math.abs(monthlyFee - baseFee) > 0.01)) return monthlyFee;
+    if (baseFee > 0) return calculated;
+    return 0;
+}
+
+function getTeacherNetSalary(teacher) {
+    const gross = toNumber(teacher.salary);
+    const taxPercent = normalizePercent(teacher.salaryTax ?? teacher.tax);
+    return calculateSalaryAfterTax(gross, taxPercent);
+}
+
+function normalizeDeductionAmount(value) {
+    return Math.max(0, toNumber(value));
+}
+
+function normalizeTeacherSalaryRecord(record = {}) {
+    const lateFine = normalizeDeductionAmount(record.lateFine);
+    const leaveDeduction = normalizeDeductionAmount(record.leaveDeduction);
+    const otherDeduction = normalizeDeductionAmount(record.otherDeduction);
+    const totalDeduction = lateFine + leaveDeduction + otherDeduction;
+
+    return {
+        ...record,
+        lateFine,
+        leaveDeduction,
+        otherDeduction,
+        totalDeduction
+    };
+}
+
+function calculateTeacherSalaryBreakdown(teacher, record = {}) {
+    const normalizedRecord = normalizeTeacherSalaryRecord(record);
+    const grossSalary = toNumber(teacher ? teacher.salary : normalizedRecord.grossSalary);
+    const taxPercent = normalizePercent(teacher ? (teacher.salaryTax ?? teacher.tax) : normalizedRecord.taxPercent);
+    const netAfterTax = calculateSalaryAfterTax(grossSalary, taxPercent);
+    const finalPayable = Math.max(0, netAfterTax - normalizedRecord.totalDeduction);
+
+    return {
+        grossSalary,
+        taxPercent,
+        netAfterTax,
+        lateFine: normalizedRecord.lateFine,
+        leaveDeduction: normalizedRecord.leaveDeduction,
+        otherDeduction: normalizedRecord.otherDeduction,
+        totalDeduction: normalizedRecord.totalDeduction,
+        finalPayable
+    };
+}
+
+function teacherSalaryMapToPayload(salaries) {
+    return Object.entries(salaries).map(([id, record]) => ({ id, ...record }));
+}
+
 async function upsertBannerToSQL(payload) {
     try {
         const res = await fetch(`${API_BASE_URL}/banners/upload`, {
@@ -145,6 +233,24 @@ async function initialSQLSync() {
             const data = await tRes.json();
             localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(data));
             if (typeof renderTeachers === 'function') renderTeachers();
+        }
+
+        const stRes = await fetch(`${API_BASE_URL}/staff`);
+        if (stRes.ok) {
+            const data = await stRes.json();
+            localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(data));
+            if (typeof renderStaff === 'function') renderStaff();
+        }
+
+        const tsRes = await fetch(`${API_BASE_URL}/teacher-salaries`);
+        if (tsRes.ok) {
+            const data = await tsRes.json();
+            const salaryMap = {};
+            (Array.isArray(data) ? data : []).forEach((item) => {
+                if (item && item.id) salaryMap[item.id] = item;
+            });
+            localStorage.setItem(STORAGE_KEY_TEACHER_SALARIES, JSON.stringify(salaryMap));
+            if (typeof renderTeacherSalaries === 'function') renderTeacherSalaries();
         }
 
         const nRes = await fetch(`${API_BASE_URL}/notices`);
@@ -321,6 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tSearch) {
             tSearch.addEventListener('input', (e) => renderTeachers(e.target.value.toLowerCase()));
         }
+        const tImage = document.getElementById('tImage');
+        if (tImage) tImage.addEventListener('change', previewTeacherImageInput);
     }
 
     // === STAFF PAGE ===
@@ -332,6 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sSearch) {
             sSearch.addEventListener('input', (e) => renderStaff(e.target.value.toLowerCase()));
         }
+        const sImage = document.getElementById('sImage');
+        if (sImage) sImage.addEventListener('change', previewStaffImageInput);
     }
 
     // === CLASSES PAGE ===
@@ -419,6 +529,7 @@ function saveData(key, data) {
     // Auto-Sync to Real-Time SQL
     if (key === STORAGE_KEY_STUDENTS) syncToSQL('students', data);
     if (key === STORAGE_KEY_TEACHERS) syncToSQL('teachers', data);
+    if (key === STORAGE_KEY_STAFF) syncToSQL('staff', data);
 }
 
 function toggleStepPanel(panelId) {
@@ -913,7 +1024,7 @@ function updateDashboardStats() {
     if (document.getElementById('dashRevenue')) {
         const totalRevenue = s.reduce((sum, student) => {
             if (student.feesStatus === 'Paid') {
-                return sum + (parseInt(student.fees || student.monthlyFee) || 0);
+                return sum + getStudentMonthlyFeeTotal(student);
             }
             return sum;
         }, 0);
@@ -1327,6 +1438,9 @@ function handleStudentFormSubmit(e) {
     const feesInput = document.getElementById('fees')
         ? document.getElementById('fees').value
         : (document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '0');
+    const feeTaxInput = document.getElementById('feeTax')
+        ? document.getElementById('feeTax').value
+        : (existingStudent ? (existingStudent.feeTax ?? existingStudent.tax ?? '0') : '0');
 
     // Validation
     if (!usernameInput || !studentPasswordInput) {
@@ -1334,7 +1448,10 @@ function handleStudentFormSubmit(e) {
         if (!document.getElementById('credPanel').classList.contains('active')) toggleStepPanel('credPanel');
         return;
     }
-    if (!feesInput || feesInput === '0') {
+    const baseFee = toNumber(feesInput);
+    const feeTaxPercent = normalizePercent(feeTaxInput);
+    const totalFee = calculateFeeWithTax(baseFee, feeTaxPercent);
+    if (!baseFee || baseFee <= 0) {
         alert('Please set the student fee structure.');
         if (!document.getElementById('feePanel').classList.contains('active')) toggleStepPanel('feePanel');
         return;
@@ -1350,8 +1467,10 @@ function handleStudentFormSubmit(e) {
         rollNo: document.getElementById('rollNo').value,
         formB: document.getElementById('formB').value,
         feesStatus: currentStatus,
-        fees: feesInput,
-        monthlyFee: feesInput,
+        fees: String(baseFee),
+        feeTax: String(feeTaxPercent),
+        tax: String(feeTaxPercent),
+        monthlyFee: String(totalFee),
         feeFrequency: document.getElementById('feeFrequency') ? document.getElementById('feeFrequency').value : 'Monthly',
         username: usernameInput,
         password: studentPasswordInput,
@@ -1444,6 +1563,7 @@ function editStudent(s) {
     document.getElementById('rollNo').value = s.rollNo;
     document.getElementById('formB').value = s.formB || '';
     if (document.getElementById('fees')) document.getElementById('fees').value = s.fees || s.monthlyFee || '0';
+    if (document.getElementById('feeTax')) document.getElementById('feeTax').value = s.feeTax ?? s.tax ?? '0';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.fees || s.monthlyFee || '0';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';
     if (document.getElementById('username')) document.getElementById('username').value = s.username || '';
@@ -1464,15 +1584,43 @@ function deleteStudent(id) {
 // ==================== TEACHER LOGIC ====================
 // =======================================================
 
+function previewImageInput(fileInputId, previewWrapId, previewImageId) {
+    const fileInput = document.getElementById(fileInputId);
+    const previewWrap = document.getElementById(previewWrapId);
+    const previewImage = document.getElementById(previewImageId);
+    if (!fileInput || !previewWrap || !previewImage) return;
+    if (!fileInput.files || !fileInput.files.length) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        previewImage.src = event.target.result;
+        previewWrap.style.display = 'block';
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+}
+
+function previewTeacherImageInput() {
+    previewImageInput('tImage', 'teacherImagePreviewWrap', 'teacherImagePreview');
+}
+
+function previewStaffImageInput() {
+    previewImageInput('sImage', 'staffImagePreviewWrap', 'staffImagePreview');
+}
+
 function toggleTeacherForm(editMode = false) {
     const container = document.getElementById('teacherFormContainer');
     const form = document.getElementById('teacherForm');
     const title = document.getElementById('teacherFormTitle');
+    const previewWrap = document.getElementById('teacherImagePreviewWrap');
+    const previewImage = document.getElementById('teacherImagePreview');
 
     if (container.style.display === 'block' && !editMode) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('teacherId').value = '';
+        if (document.getElementById('tImagePath')) document.getElementById('tImagePath').value = '';
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (previewImage) previewImage.src = '';
     } else {
         container.style.display = 'block';
         // Reset Panels
@@ -1482,6 +1630,9 @@ function toggleTeacherForm(editMode = false) {
         if (!editMode) {
             form.reset();
             document.getElementById('teacherId').value = '';
+            if (document.getElementById('tImagePath')) document.getElementById('tImagePath').value = '';
+            if (previewWrap) previewWrap.style.display = 'none';
+            if (previewImage) previewImage.src = '';
             title.innerText = 'Add New Teacher';
         } else {
             title.innerText = 'Edit Teacher Details';
@@ -1489,7 +1640,7 @@ function toggleTeacherForm(editMode = false) {
     }
 }
 
-function handleTeacherFormSubmit(e) {
+async function handleTeacherFormSubmit(e) {
     e.preventDefault();
     const idField = document.getElementById('teacherId');
     const isEdit = idField.value !== '';
@@ -1497,6 +1648,18 @@ function handleTeacherFormSubmit(e) {
     const usernameInput = document.getElementById('tUsername').value;
     const tPasswordInput = document.getElementById('tPassword').value;
     const salaryValInput = document.getElementById('tSalary').value || '0';
+    const salaryTaxInput = document.getElementById('tSalaryTax')
+        ? document.getElementById('tSalaryTax').value
+        : '0';
+    const tImageInput = document.getElementById('tImage');
+    const existingImagePath = document.getElementById('tImagePath') ? document.getElementById('tImagePath').value : '';
+    let imageData = null;
+    let imagePath = existingImagePath || '';
+
+    if (tImageInput && tImageInput.files && tImageInput.files.length > 0) {
+        imageData = await readFileAsDataURL(tImageInput.files[0]);
+        imagePath = imageData; // Local fallback preview when backend is offline
+    }
 
     // Validation
     if (!usernameInput || !tPasswordInput) {
@@ -1504,7 +1667,10 @@ function handleTeacherFormSubmit(e) {
         if (!document.getElementById('credPanel').classList.contains('active')) toggleStepPanel('credPanel');
         return;
     }
-    if (!salaryValInput || salaryValInput === '0') {
+    const grossSalary = toNumber(salaryValInput);
+    const salaryTaxPercent = normalizePercent(salaryTaxInput);
+    const netSalary = calculateSalaryAfterTax(grossSalary, salaryTaxPercent);
+    if (!grossSalary || grossSalary <= 0) {
         alert('Please set the teacher salary.');
         if (!document.getElementById('salaryPanel').classList.contains('active')) toggleStepPanel('salaryPanel');
         return;
@@ -1520,11 +1686,16 @@ function handleTeacherFormSubmit(e) {
         qualification: document.getElementById('tQualification').value,
         gender: document.getElementById('tGender').value,
         subject: document.getElementById('tSubject').value,
-        salary: salaryValInput,
+        salary: String(grossSalary),
+        salaryTax: String(salaryTaxPercent),
+        tax: String(salaryTaxPercent),
+        netSalary: String(netSalary),
+        imagePath,
         username: usernameInput,
         password: tPasswordInput,
         role: 'Teacher'
     };
+    if (imageData) newTeacher.imageData = imageData;
 
     let teachers = getData(STORAGE_KEY_TEACHERS);
     if (isEdit) {
@@ -1565,10 +1736,17 @@ function renderTeachers(term = '') {
     } else {
         noData.style.display = 'none';
         filtered.forEach(t => {
+            const teacherImage = resolveMediaUrl(t.imageUrl || t.imagePath || '');
+            const grossSalary = toNumber(t.salary);
+            const taxPercent = normalizePercent(t.salaryTax ?? t.tax);
+            const netSalary = calculateSalaryAfterTax(grossSalary, taxPercent);
+            const avatarView = teacherImage
+                ? `<img src="${teacherImage}" alt="${t.fullName}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color);">`
+                : `<div style="width:30px;height:30px;background:#f0bdd1;color:#be185d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold">${t.fullName.charAt(0).toUpperCase()}</div>`;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><div style="display:flex;align-items:center;gap:0.5rem">
-                    <div style="width:30px;height:30px;background:#f0bdd1;color:#be185d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold">${t.fullName.charAt(0).toUpperCase()}</div>
+                    ${avatarView}
                     <div>
                         <div style="font-weight:500">${t.fullName}</div>
                         <div style="font-size:0.75rem;color:var(--text-secondary)">${t.qualification || ''}</div>
@@ -1576,13 +1754,16 @@ function renderTeachers(term = '') {
                 </div></td>
                 <td>${t.fatherName || '-'}</td>
                 <td>${t.subject}</td>
-                <td style="font-weight:600;">PKR ${parseInt(t.salary || 0).toLocaleString()}</td>
+                <td style="font-weight:600;">
+                    PKR ${netSalary.toLocaleString()}
+                    <div style="font-size:0.75rem; color:var(--text-secondary);">Gross ${grossSalary.toLocaleString()} • Tax ${taxPercent}%</div>
+                </td>
                 <td>${t.phone || '-'}</td>
                 <td>
-                    <button class="action-btn btn-view" onclick='viewTeacherAttendance(${JSON.stringify(t)})' title="View Attendance">
+                    <button class="action-btn btn-view" onclick="viewTeacherAttendance('${t.id}')" title="View Attendance">
                         <i data-lucide="eye" width="14"></i>
                     </button>
-                    <button class="action-btn btn-edit" onclick='editTeacher(${JSON.stringify(t)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
+                    <button class="action-btn btn-edit" onclick="editTeacher('${t.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
                     <button class="action-btn btn-delete" onclick="deleteTeacher('${t.id}')"><i data-lucide="trash-2" width="14"></i></button>
                 </td>
             `;
@@ -1592,7 +1773,11 @@ function renderTeachers(term = '') {
     }
 }
 
-function editTeacher(t) {
+function editTeacher(teacher) {
+    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const t = typeof teacher === 'string' ? teachers.find(x => x.id === teacher) : teacher;
+    if (!t) return;
+
     toggleTeacherForm(true);
     document.getElementById('teacherId').value = t.id;
     document.getElementById('tFullName').value = t.fullName;
@@ -1604,6 +1789,20 @@ function editTeacher(t) {
     document.getElementById('tGender').value = t.gender || '';
     document.getElementById('tSubject').value = t.subject;
     document.getElementById('tSalary').value = t.salary || '0';
+    if (document.getElementById('tSalaryTax')) document.getElementById('tSalaryTax').value = t.salaryTax ?? t.tax ?? '0';
+    if (document.getElementById('tImagePath')) document.getElementById('tImagePath').value = t.imagePath || '';
+    const previewWrap = document.getElementById('teacherImagePreviewWrap');
+    const previewImage = document.getElementById('teacherImagePreview');
+    const resolvedImage = resolveMediaUrl(t.imageUrl || t.imagePath || '');
+    if (previewWrap && previewImage) {
+        if (resolvedImage) {
+            previewImage.src = resolvedImage;
+            previewWrap.style.display = 'block';
+        } else {
+            previewImage.src = '';
+            previewWrap.style.display = 'none';
+        }
+    }
     if (document.getElementById('tUsername')) document.getElementById('tUsername').value = t.username || '';
     if (document.getElementById('tPassword')) document.getElementById('tPassword').value = t.password || '';
 }
@@ -1618,7 +1817,13 @@ function deleteTeacher(id) {
 }
 
 
-function viewTeacherAttendance(teacher, monthKey = null) {
+function viewTeacherAttendance(teacherInput, monthKey = null) {
+    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teacher = typeof teacherInput === 'string'
+        ? teachers.find(t => t.id === teacherInput)
+        : teacherInput;
+    if (!teacher) return;
+
     const modal = document.getElementById('attendanceModal');
     const title = document.getElementById('attModalTitle');
     const grid = document.getElementById('attendanceGrid');
@@ -1734,16 +1939,24 @@ function toggleStaffForm(editMode = false) {
     const container = document.getElementById('staffFormContainer');
     const form = document.getElementById('staffForm');
     const title = document.getElementById('staffFormTitle');
+    const previewWrap = document.getElementById('staffImagePreviewWrap');
+    const previewImage = document.getElementById('staffImagePreview');
 
     if (container.style.display === 'block' && !editMode) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('staffId').value = '';
+        if (document.getElementById('sImagePath')) document.getElementById('sImagePath').value = '';
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (previewImage) previewImage.src = '';
     } else {
         container.style.display = 'block';
         if (!editMode) {
             form.reset();
             document.getElementById('staffId').value = '';
+            if (document.getElementById('sImagePath')) document.getElementById('sImagePath').value = '';
+            if (previewWrap) previewWrap.style.display = 'none';
+            if (previewImage) previewImage.src = '';
             title.innerText = 'Add New Staff Member';
         } else {
             title.innerText = 'Edit Staff Member';
@@ -1751,10 +1964,19 @@ function toggleStaffForm(editMode = false) {
     }
 }
 
-function handleStaffFormSubmit(e) {
+async function handleStaffFormSubmit(e) {
     e.preventDefault();
     const idField = document.getElementById('staffId');
     const isEdit = idField.value !== '';
+    const sImageInput = document.getElementById('sImage');
+    const existingImagePath = document.getElementById('sImagePath') ? document.getElementById('sImagePath').value : '';
+    let imageData = null;
+    let imagePath = existingImagePath || '';
+
+    if (sImageInput && sImageInput.files && sImageInput.files.length > 0) {
+        imageData = await readFileAsDataURL(sImageInput.files[0]);
+        imagePath = imageData; // Local fallback preview when backend is offline
+    }
 
     const newStaff = {
         id: isEdit ? idField.value : Date.now().toString(),
@@ -1766,7 +1988,9 @@ function handleStaffFormSubmit(e) {
         address: document.getElementById('sAddress').value,
         gender: document.getElementById('sGender').value,
         salary: document.getElementById('sSalary').value || '0',
+        imagePath
     };
+    if (imageData) newStaff.imageData = imageData;
 
     let staff = getData(STORAGE_KEY_STAFF);
     if (isEdit) {
@@ -1805,10 +2029,14 @@ function renderStaff(term = '') {
     } else {
         noData.style.display = 'none';
         filtered.forEach(s => {
+            const staffImage = resolveMediaUrl(s.imageUrl || s.imagePath || '');
+            const avatarView = staffImage
+                ? `<img src="${staffImage}" alt="${s.fullName}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color);">`
+                : `<div style="width:30px;height:30px;background:#dcfce7;color:#166534;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold">${s.fullName.charAt(0).toUpperCase()}</div>`;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><div style="display:flex;align-items:center;gap:0.5rem">
-                    <div style="width:30px;height:30px;background:#dcfce7;color:#166534;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold">${s.fullName.charAt(0).toUpperCase()}</div>
+                    ${avatarView}
                     <div>
                         <div style="font-weight:500">${s.fullName}</div>
                         <div style="font-size:0.75rem;color:var(--text-secondary)">${s.designation || ''}</div>
@@ -1820,7 +2048,7 @@ function renderStaff(term = '') {
                 <td>${s.phone || '-'}</td>
                 <td>PKR ${s.salary}</td>
                 <td>
-                    <button class="action-btn btn-edit" onclick='editStaff(${JSON.stringify(s)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
+                    <button class="action-btn btn-edit" onclick="editStaff('${s.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
                     <button class="action-btn btn-delete" onclick="deleteStaff('${s.id}')"><i data-lucide="trash-2" width="14"></i></button>
                 </td>
             `;
@@ -1830,7 +2058,11 @@ function renderStaff(term = '') {
     }
 }
 
-function editStaff(s) {
+function editStaff(staffInput) {
+    const allStaff = getData(STORAGE_KEY_STAFF);
+    const s = typeof staffInput === 'string' ? allStaff.find(x => x.id === staffInput) : staffInput;
+    if (!s) return;
+
     toggleStaffForm(true);
     document.getElementById('staffId').value = s.id;
     document.getElementById('sFullName').value = s.fullName;
@@ -1841,6 +2073,19 @@ function editStaff(s) {
     document.getElementById('sAddress').value = s.address || '';
     document.getElementById('sGender').value = s.gender || '';
     document.getElementById('sSalary').value = s.salary || '0';
+    if (document.getElementById('sImagePath')) document.getElementById('sImagePath').value = s.imagePath || '';
+    const previewWrap = document.getElementById('staffImagePreviewWrap');
+    const previewImage = document.getElementById('staffImagePreview');
+    const resolvedImage = resolveMediaUrl(s.imageUrl || s.imagePath || '');
+    if (previewWrap && previewImage) {
+        if (resolvedImage) {
+            previewImage.src = resolvedImage;
+            previewWrap.style.display = 'block';
+        } else {
+            previewImage.src = '';
+            previewWrap.style.display = 'none';
+        }
+    }
 }
 
 function deleteStaff(id) {
@@ -2163,27 +2408,87 @@ function getTeacherSalaries() {
 
 function saveTeacherSalaries(salaries) {
     localStorage.setItem(STORAGE_KEY_TEACHER_SALARIES, JSON.stringify(salaries));
+    const payload = teacherSalaryMapToPayload(salaries);
+    fetch(`${API_BASE_URL}/teacher-salaries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).catch(() => {
+        console.warn("Teacher salary sync skipped (server offline).");
+    });
 }
 
 function toggleSalaryPayment(teacherId, monthKey) {
     const salaries = getTeacherSalaries();
-    // Key format: teacherId_YYYY-MM
     const key = `${teacherId}_${monthKey}`;
+    const existingRecord = normalizeTeacherSalaryRecord(salaries[key] || {});
+    const teacher = getData(STORAGE_KEY_TEACHERS).find((t) => t.id === teacherId);
+    const breakdown = calculateTeacherSalaryBreakdown(teacher, existingRecord);
+    const wasPaid = !!(salaries[key] && salaries[key].paid !== false);
 
-    if (salaries[key]) {
-        // Toggle off
-        delete salaries[key];
-        pushNotification('Salary Update', 'Salary payment record removed.', 'info');
+    if (wasPaid) {
+        salaries[key] = {
+            ...existingRecord,
+            paid: false,
+            grossSalary: breakdown.grossSalary,
+            taxPercent: breakdown.taxPercent,
+            netSalary: breakdown.netAfterTax,
+            totalDeduction: breakdown.totalDeduction,
+            finalPayable: breakdown.finalPayable,
+            salaryAmount: breakdown.finalPayable,
+            monthKey,
+            teacherId
+        };
+        pushNotification('Salary Update', 'Salary payment status reset to unpaid.', 'info');
     } else {
-        // Record payment
         const now = new Date();
         salaries[key] = {
+            ...existingRecord,
             paid: true,
             date: now.toLocaleDateString(),
-            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            grossSalary: breakdown.grossSalary,
+            taxPercent: breakdown.taxPercent,
+            netSalary: breakdown.netAfterTax,
+            totalDeduction: breakdown.totalDeduction,
+            finalPayable: breakdown.finalPayable,
+            salaryAmount: breakdown.finalPayable,
+            monthKey,
+            teacherId
         };
         pushNotification('Salary Update', 'Salary payment recorded successfully.', 'success');
     }
+
+    saveTeacherSalaries(salaries);
+    if (typeof renderTeacherSalaries === 'function') {
+        renderTeacherSalaries();
+    }
+}
+
+function updateSalaryDeduction(teacherId, monthKey, field, value) {
+    const validFields = ['lateFine', 'leaveDeduction', 'otherDeduction'];
+    if (!validFields.includes(field)) return;
+
+    const salaries = getTeacherSalaries();
+    const key = `${teacherId}_${monthKey}`;
+    const current = normalizeTeacherSalaryRecord(salaries[key] || {});
+    current[field] = normalizeDeductionAmount(value);
+
+    const teacher = getData(STORAGE_KEY_TEACHERS).find((t) => t.id === teacherId);
+    const breakdown = calculateTeacherSalaryBreakdown(teacher, current);
+
+    salaries[key] = {
+        ...current,
+        paid: !!(current.paid),
+        grossSalary: breakdown.grossSalary,
+        taxPercent: breakdown.taxPercent,
+        netSalary: breakdown.netAfterTax,
+        totalDeduction: breakdown.totalDeduction,
+        finalPayable: breakdown.finalPayable,
+        salaryAmount: breakdown.finalPayable,
+        monthKey,
+        teacherId
+    };
 
     saveTeacherSalaries(salaries);
     if (typeof renderTeacherSalaries === 'function') {

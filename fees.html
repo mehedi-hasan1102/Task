@@ -385,7 +385,8 @@
                         <p id="selectedStudentDetails"
                             style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">
                             Roll No: <span id="spanRollNo" style="color: var(--text-primary);"></span> |
-                            Class: <span id="spanClass" style="color: var(--text-primary);"></span>
+                            Class: <span id="spanClass" style="color: var(--text-primary);"></span> |
+                            Monthly Fee: <span id="spanFee" style="color: var(--text-primary);"></span>
                         </p>
                     </div>
                     <button class="back-btn" onclick="backToStudentList()">
@@ -470,6 +471,29 @@
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         ];
+
+        function toNumber(value) {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function normalizePercent(value) {
+            const percent = toNumber(value);
+            if (percent < 0) return 0;
+            if (percent > 100) return 100;
+            return percent;
+        }
+
+        function getStudentMonthlyFeeTotal(student) {
+            const monthlyFee = toNumber(student.monthlyFee);
+            const baseFee = toNumber(student.fees);
+            const taxPercent = normalizePercent(student.feeTax ?? student.tax);
+            const calculated = (baseFee || monthlyFee) + ((baseFee || monthlyFee) * taxPercent / 100);
+
+            if (monthlyFee > 0 && (baseFee <= 0 || Math.abs(monthlyFee - baseFee) > 0.01)) return monthlyFee;
+            if (baseFee > 0) return calculated;
+            return 0;
+        }
 
         function renderFeesClassGrid() {
             const grid = document.getElementById('feesClassGrid');
@@ -599,6 +623,7 @@
             document.getElementById('selectedStudentName').innerText = student.fullName;
             document.getElementById('spanRollNo').innerText = student.rollNo;
             document.getElementById('spanClass').innerText = student.classGrade;
+            document.getElementById('spanFee').innerText = 'PKR ' + getStudentMonthlyFeeTotal(student).toLocaleString();
             document.getElementById('pageTitle').innerText = 'Record: ' + student.fullName;
 
             renderMonthlyFeeRecord(studentId);

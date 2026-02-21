@@ -163,6 +163,7 @@
                 <h3 style="margin-bottom: 1.5rem;" id="staffFormTitle">Add New Staff Member</h3>
                 <form id="staffForm">
                     <input type="hidden" id="staffId">
+                    <input type="hidden" id="sImagePath">
 
                     <div class="form-grid">
                         <div class="input-group">
@@ -201,6 +202,15 @@
                         <div class="input-group">
                             <label>Monthly Salary</label>
                             <input type="number" id="sSalary" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Profile Image</label>
+                            <input type="file" id="sImage" accept="image/*">
+                        </div>
+                        <div id="staffImagePreviewWrap" class="input-group" style="display:none;">
+                            <label>Image Preview</label>
+                            <img id="staffImagePreview" src="" alt="Staff image preview"
+                                style="width:100%; max-width:180px; height:180px; object-fit:cover; border-radius:12px; border:1px solid var(--border-color);">
                         </div>
                     </div>
 

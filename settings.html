@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .settings-card {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .settings-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .verification-box {
+            background-color: #fef2f2;
+            border: 1px dashed #fee2e2;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile active">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Settings</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Account Settings</h1>
+                <div class="header-actions">
+                    <div class="notification-bell" id="notificationBell">
+                        <i data-lucide="bell" size="22"></i>
+                        <span class="notification-badge" id="notifBadge">0</span>
+                        <div class="notif-panel" id="notificationPanel">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
+                            </div>
+                            <div class="notif-list" id="notificationList"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div style="max-width: 800px;">
+                <form id="settingsForm">
+                    <!-- General School Info -->
+
+
+                    <!-- Session & Login Activity -->
+                    <div class="settings-card">
+                        <h3 class="settings-section-title">
+                            <i data-lucide="activity" size="18"></i> Session & Login Activity
+                        </h3>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            Track current active sessions and login history
+                        </p>
+
+                        <!-- Current Session Card -->
+                        <div
+                            style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div
+                                    style="width: 48px; height: 48px; background: #dcfce7; color: #166534; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i data-lucide="user-check" size="24"></i>
+                                </div>
+                                <div>
+                                    <div
+                                        style="font-weight: 600; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
+                                        Current Session
+                                        <span
+                                            style="background: #166534; color: white; padding: 2px 8px; border-radius: 99px; font-size: 0.7rem;">active</span>
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #15803d; margin-top: 0.25rem;">
+                                        Logged in as <span style="font-weight: 600;"
+                                            id="currentUserDisplay">Admin</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align: right; color: #15803d; font-size: 0.85rem;">
+                                <div><i data-lucide="monitor" size="14" style="vertical-align: middle;"></i> Web
+                                    Interface</div>
+                                <div style="margin-top: 0.25rem;">IP: 127.0.0.1 (Local)</div>
+                            </div>
+                        </div>
+
+                        <h4
+                            style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">
+                            Recent Login History</h4>
+                        <div class="table-container"
+                            style="padding: 0; box-shadow: none; border: 1px solid var(--border-color);">
+                            <table style="width: 100%;">
+                                <thead style="background: #f8fafc;">
+                                    <tr>
+                                        <th style="padding: 0.75rem 1rem;">User</th>
+                                        <th style="padding: 0.75rem 1rem;">Date & Time</th>
+                                        <th style="padding: 0.75rem 1rem;">Status</th>
+                                        <th style="padding: 0.75rem 1rem;">IP Address</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="loginHistoryBody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                            <div id="noLoginData"
+                                style="text-align: center; padding: 1.5rem; color: var(--text-secondary); display: none;">
+                                No login history available.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security & Credentials -->
+                    <div class="settings-card">
+                        <h3 class="settings-section-title">
+                            <i data-lucide="shield-check" size="18"></i> Security & Credentials
+                        </h3>
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div class="input-group">
+                                <label>New Admin Email</label>
+                                <input type="email" id="sContactEmail" placeholder="new-admin@email.com">
+                            </div>
+                            <div class="input-group">
+                                <label>New Admin Password</label>
+                                <input type="password" id="sPassword" placeholder="Enter new password">
+                            </div>
+                        </div>
+
+                        <div class="verification-box">
+                            <h4
+                                style="color: var(--danger-color); font-size: 0.9rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i data-lucide="lock" size="16"></i> Identity Verification Required
+                            </h4>
+                            <p style="font-size: 0.8rem; color: #7f1d1d; margin-bottom: 1.25rem;">
+                                For your security, please enter your <b>current</b> login credentials to authorize these
+                                changes.
+                            </p>
+                            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="input-group">
+                                    <label>Current Email</label>
+                                    <input type="email" id="vOldEmail" required placeholder="Verify current email"
+                                        style="background: white;">
+                                </div>
+                                <div class="input-group">
+                                    <label>Current Password</label>
+                                    <input type="password" id="vOldPassword" required
+                                        placeholder="Verify current password" style="background: white;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                        <button type="button" class="btn btn-outline"
+                            onclick="window.location.href='dashboard.html'">Discard</button>
+                        <button type="submit" class="btn btn-primary">Update Account</button>
+                    </div>
+                </form>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Load existing settings when on this page
+        if (typeof loadSettings === 'function') loadSettings();
+
+        // Initialize page
+        if (typeof renderLoginHistory === 'function') renderLoginHistory();
+
+
+        // Re-render icons
+        setTimeout(() => {
+            if (window.lucide) window.lucide.createIcons();
+        }, 100);
+    </script>
+</body>
+
+</html>

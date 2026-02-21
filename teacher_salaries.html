@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Salaries - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .month-selector-card {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+
+        .month-input {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            background: #f8fafc;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .status-paid-badge {
+            background: #dcfce7;
+            color: #166534;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-unpaid-badge {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .salary-row:hover {
+            background-color: #f8fafc;
+        }
+
+        .payment-date-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .payment-date-info span:first-child {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .payment-date-info span:last-child {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item active">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Monthly Salaries</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Track and record teacher salary
+                        payments</p>
+                </div>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="salarySearch" placeholder="Search teachers...">
+                    </div>
+                </div>
+            </header>
+
+            <div class="month-selector-card">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div
+                        style="background: rgba(32, 176, 164, 0.1); color: var(--primary-color); padding: 0.5rem; border-radius: 0.5rem;">
+                        <i data-lucide="calendar"></i>
+                    </div>
+                    <div>
+                        <div
+                            style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">
+                            Select Payment Month</div>
+                        <input type="month" id="salaryMonthInput" class="month-input">
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div
+                        style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">
+                        Total Monthly Payout</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);"
+                        id="monthlyTotalDisplay">PKR 0</div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Teacher Name</th>
+                            <th>Monthly Salary</th>
+                            <th>Status</th>
+                            <th>Payment Date</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salaryTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+                <div id="noSalaryData"
+                    style="text-align: center; padding: 4rem; color: var(--text-secondary); display: none;">
+                    <i data-lucide="users" size="48" style="margin-bottom: 1rem; opacity: 0.2;"></i>
+                    <p>No teachers found in the system. Add teachers first to manage salaries.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set current month as default
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const monthInput = document.getElementById('salaryMonthInput');
+            monthInput.value = currentMonth;
+
+            renderTeacherSalaries();
+
+            monthInput.addEventListener('change', renderTeacherSalaries);
+            document.getElementById('salarySearch').addEventListener('input', () => renderTeacherSalaries());
+        });
+
+        function renderTeacherSalaries() {
+            const tbody = document.getElementById('salaryTableBody');
+            const noData = document.getElementById('noSalaryData');
+            const totalDisplay = document.getElementById('monthlyTotalDisplay');
+            const monthKey = document.getElementById('salaryMonthInput').value;
+            const term = document.getElementById('salarySearch').value.toLowerCase();
+
+            const teachers = getData(STORAGE_KEY_TEACHERS);
+            const salaryRecords = getTeacherSalaries();
+
+            let filtered = teachers;
+            if (term) {
+                filtered = teachers.filter(t => t.fullName.toLowerCase().includes(term));
+            }
+
+            tbody.innerHTML = '';
+            let totalPaid = 0;
+
+            if (filtered.length === 0) {
+                noData.style.display = 'block';
+                totalDisplay.innerText = 'PKR 0';
+                return;
+            }
+
+            noData.style.display = 'none';
+
+            filtered.forEach(t => {
+                const recordKey = `${t.id}_${monthKey}`;
+                const payment = salaryRecords[recordKey];
+                const isPaid = !!payment;
+                const salaryAmount = parseInt(t.salary) || 0;
+
+                if (isPaid) totalPaid += salaryAmount;
+
+                const tr = document.createElement('tr');
+                tr.className = 'salary-row';
+                tr.innerHTML = `
+                    <td>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:rgba(32, 176, 164, 0.1); color:var(--primary-color); display:flex; align-items:center; justify-content:center; font-weight:700;">
+                                ${t.fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div style="font-weight:600; color:var(--text-primary);">${t.fullName}</div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary);">${t.subject}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-weight:700; color:var(--text-primary);">PKR ${salaryAmount.toLocaleString()}</td>
+                    <td>
+                        <span class="${isPaid ? 'status-paid-badge' : 'status-unpaid-badge'}">
+                            ${isPaid ? 'Paid' : 'Unpaid'}
+                        </span>
+                    </td>
+                    <td>
+                        ${isPaid ? `
+                            <div class="payment-date-info">
+                                <span>${payment.date}</span>
+                                <span>at ${payment.time}</span>
+                            </div>
+                        ` : '<span style="color:var(--text-secondary); font-style:italic;">--</span>'}
+                    </td>
+                    <td style="text-align: right;">
+                        <button class="btn ${isPaid ? 'btn-outline' : 'btn-primary'}" 
+                                style="padding: 0.5rem 1rem; font-size: 0.8rem;" 
+                                onclick="toggleSalaryPayment('${t.id}', '${monthKey}')">
+                            <i data-lucide="${isPaid ? 'rotate-ccw' : 'check'}" size="14" style="margin-right: 0.4rem;"></i>
+                            ${isPaid ? 'Reset Status' : 'Mark as Paid'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            totalDisplay.innerText = 'PKR ' + totalPaid.toLocaleString();
+            if (window.lucide) lucide.createIcons();
+        }
+    </script>
+</body>
+
+</html>

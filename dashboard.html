@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item active">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Overview</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="dashSearch" placeholder="Search students...">
+                    </div>
+                    <div class="notification-bell" id="notificationBell">
+                        <i data-lucide="bell" size="22"></i>
+                        <span class="notification-badge" id="notifBadge">0</span>
+
+                        <div class="notif-panel" id="notificationPanel">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
+                            </div>
+                            <div class="notif-list" id="notificationList">
+                                <!-- Notifications added via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <a href="students.html" class="card">
+                    <div class="card-title">Total Students</div>
+                    <div class="card-value" id="dashStudentCount">...</div>
+                    <div class="card-trend trend-up">
+                        <i data-lucide="trending-up" size="16"></i> Manage Records
+                    </div>
+                    <div class="card-icon">
+                        <i data-lucide="users"></i>
+                    </div>
+                </a>
+
+                <a href="teachers.html" class="card">
+                    <div class="card-title">Total Teachers</div>
+                    <div class="card-value" id="dashTeacherCount">...</div>
+                    <div class="card-trend trend-up">
+                        <i data-lucide="trending-up" size="16"></i> Manage Staff
+                    </div>
+                    <div class="card-icon">
+                        <i data-lucide="book-open"></i>
+                    </div>
+                </a>
+
+                <a href="staff.html" class="card">
+                    <div class="card-title">Total Staff</div>
+                    <div class="card-value" id="dashStaffCount">...</div>
+                    <div class="card-trend trend-up">
+                        <i data-lucide="trending-up" size="16"></i> Manage Members
+                    </div>
+                    <div class="card-icon">
+                        <i data-lucide="briefcase"></i>
+                    </div>
+                </a>
+
+                <a href="revenue.html" class="card">
+                    <div class="card-title">Total Revenue</div>
+                    <div class="card-value" id="dashRevenue">...</div>
+                    <div class="card-trend trend-up">
+                        <i data-lucide="dollar-sign" size="16"></i> Collected Fees
+                    </div>
+                    <div class="card-icon">
+                        <i data-lucide="trending-up"></i>
+                    </div>
+                </a>
+
+                <a href="notices.html" class="card">
+                    <div class="card-title">Total Notices</div>
+                    <div class="card-value" id="dashNoticeCount">...</div>
+                    <div class="card-trend trend-up">
+                        <i data-lucide="megaphone" size="16"></i> Manage Updates
+                    </div>
+                    <div class="card-icon">
+                        <i data-lucide="megaphone"></i>
+                    </div>
+                </a>
+
+
+            </div>
+
+            <!-- Dashboard Table Section -->
+
+
+
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

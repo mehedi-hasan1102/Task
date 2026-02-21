@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Specific Basic Styles for the Form Modal/Section */
+        .form-container {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+            display: none;
+            /* Hidden by default */
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-container.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: var(--transition);
+        }
+
+        .btn-edit {
+            background: #eff6ff;
+            color: var(--primary-color);
+        }
+
+        .btn-edit:hover {
+            background: #dbeafe;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item active">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Student Management</h1>
+                <div class="header-actions">
+                    <div class="notification-bell" id="notificationBell">
+                        <i data-lucide="bell" size="22"></i>
+                        <span class="notification-badge" id="notifBadge">0</span>
+
+                        <div class="notif-panel" id="notificationPanel">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
+                            </div>
+                            <div class="notif-list" id="notificationList">
+                                <!-- Notifications added via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="toolbar">
+                <div style="font-weight: 600; color: var(--text-secondary);">
+                    Total Students: <span id="totalStudentCount" style="color: var(--primary-color);">0</span>
+                </div>
+                <button class="btn btn-primary" onclick="toggleStudentForm()">
+                    <i data-lucide="plus"></i> Add New Student
+                </button>
+            </div>
+
+            <!-- Add/Edit Form -->
+            <div id="studentFormContainer" class="form-container">
+                <h3 style="margin-bottom: 1.5rem;" id="formTitle">Add New Student</h3>
+                <form id="studentForm">
+                    <input type="hidden" id="studentId"> <!-- Hidden ID for Editing -->
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Full Name</label>
+                            <input type="text" id="fullName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Father's Name</label>
+                            <input type="text" id="fatherName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Class</label>
+                            <select id="classGrade" required
+                                style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: #f8fafc;">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Contact (Phone)</label>
+                            <input type="tel" id="parentPhone" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Roll No</label>
+                            <input type="text" id="rollNo" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Form B No</label>
+                            <input type="text" id="formB">
+                        </div>
+
+                    </div>
+
+                    <div class="action-steps">
+                        <div class="action-step-btn" id="btnSetFee" onclick="toggleStepPanel('feePanel')">
+                            <i data-lucide="credit-card"></i>
+                            <span>Set Fee</span>
+                        </div>
+                        <div class="action-step-btn" id="btnCreateCreds" onclick="toggleStepPanel('credPanel')">
+                            <i data-lucide="key"></i>
+                            <span>Create Username & Password</span>
+                        </div>
+                        <button type="submit" class="action-step-btn btn-save-activate">
+                            <i data-lucide="check-circle"></i>
+                            <span>Save & Activate Student</span>
+                        </button>
+                    </div>
+
+                    <!-- Fee Panel -->
+                    <div id="feePanel" class="step-panel">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Set Student Fee</h4>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Monthly Fee (PKR)</label>
+                                <input type="number" id="monthlyFee" placeholder="e.g. 5000">
+                            </div>
+                            <div class="input-group">
+                                <label>Fee Frequency</label>
+                                <select id="feeFrequency"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: white;">
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="Yearly">Yearly</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Credentials Panel -->
+                    <div id="credPanel" class="step-panel">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Create Login Credentials</h4>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Username</label>
+                                <input type="text" id="username" placeholder="Assign unique username">
+                            </div>
+                            <div class="input-group">
+                                <label>Password</label>
+                                <input type="password" id="studentPassword" placeholder="Assign password">
+                            </div>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                            These credentials will be used for login on the student portal.
+                        </p>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="toggleStudentForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Students List -->
+            <div class="table-container">
+                <table id="studentsTable">
+                    <thead>
+                        <tr>
+                            <th>Roll No</th>
+                            <th>Name</th>
+                            <th>Father Name</th>
+                            <th>Class</th>
+                            <th>Phone</th>
+                            <th>Form B</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- Data will be populated here by JS -->
+                    </tbody>
+                </table>
+                <div id="noDataMessage"
+                    style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                    No students found. Add one to get started!
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="success-overlay">
+        <div class="success-modal">
+            <div class="success-icon-wrap">
+                <i data-lucide="check-circle"></i>
+            </div>
+            <h2 id="successTitle">Success!</h2>
+            <p id="successMessage" style="color: var(--text-secondary); margin: 1rem 0 2rem;"></p>
+            <button class="btn btn-primary" style="width: 100%;" onclick="closeSuccessModal()">Great!</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Init Icons
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

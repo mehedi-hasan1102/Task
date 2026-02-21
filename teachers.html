@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Teachers - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .form-container {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-container.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: var(--transition);
+        }
+
+        .btn-edit {
+            background: #eff6ff;
+            color: var(--primary-color);
+        }
+
+        .btn-edit:hover {
+            background: #dbeafe;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item active">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Teacher Management</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="teacherSearchInput" placeholder="Search by name or subject...">
+                    </div>
+                    <div class="notification-bell" id="notificationBell">
+                        <i data-lucide="bell" size="22"></i>
+                        <span class="notification-badge" id="notifBadge">0</span>
+
+                        <div class="notif-panel" id="notificationPanel">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
+                            </div>
+                            <div class="notif-list" id="notificationList">
+                                <!-- Notifications added via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="toolbar">
+                <div style="font-weight: 600; color: var(--text-secondary);">
+                    Total Teachers: <span id="totalTeacherCount" style="color: var(--primary-color);">0</span>
+                </div>
+                <button class="btn btn-primary" onclick="toggleTeacherForm()">
+                    <i data-lucide="plus"></i> Add New Teacher
+                </button>
+            </div>
+
+            <!-- Add/Edit Form -->
+            <div id="teacherFormContainer" class="form-container">
+                <h3 style="margin-bottom: 1.5rem;" id="teacherFormTitle">Add New Teacher</h3>
+                <form id="teacherForm">
+                    <input type="hidden" id="teacherId"> <!-- Hidden ID for Editing -->
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Full Name</label>
+                            <input type="text" id="tFullName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Father's Name</label>
+                            <input type="text" id="tFatherName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>CNIC</label>
+                            <input type="text" id="tCnic" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Mobile No</label>
+                            <!-- Keeping phone as requested implicitly or good practice, user said Address but usually phone is needed. I'll stick to user list but add phone if I can? User list: Full name, Father name, Cnic, Adress, Qualification, Gender, Subject. I will ADD PHONE because it was there and it's essential, but if user strictly wants only those, I should be careful. I will add Phone as it is standard. Actually user didn't say remove phone. -->
+                            <input type="tel" id="tPhone">
+                        </div>
+                        <div class="input-group">
+                            <label>Address</label>
+                            <input type="text" id="tAddress" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Qualification</label>
+                            <input type="text" id="tQualification" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Gender</label>
+                            <select id="tGender" required
+                                style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Subject</label>
+                            <input type="text" id="tSubject" required>
+                        </div>
+                    </div> <!-- End of form-grid -->
+
+                    <div class="action-steps">
+                        <div class="action-step-btn" id="btnSetSalary" onclick="toggleStepPanel('salaryPanel')">
+                            <i data-lucide="wallet"></i>
+                            <span>Set Salary</span>
+                        </div>
+                        <div class="action-step-btn" id="btnCreateCreds" onclick="toggleStepPanel('credPanel')">
+                            <i data-lucide="key"></i>
+                            <span>Create Username & Password</span>
+                        </div>
+                        <button type="submit" class="action-step-btn btn-save-activate">
+                            <i data-lucide="check-circle"></i>
+                            <span>Save & Activate Teacher</span>
+                        </button>
+                    </div>
+
+                    <!-- Salary Panel -->
+                    <div id="salaryPanel" class="step-panel">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Set Teacher Salary</h4>
+                        <div class="form-grid" style="margin-bottom: 0;">
+                            <div class="input-group">
+                                <label>Monthly Salary (PKR)</label>
+                                <input type="number" id="tSalary" placeholder="e.g. 45000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Credentials Panel -->
+                    <div id="credPanel" class="step-panel">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Create Login Credentials</h4>
+                        <div class="form-grid" style="margin-bottom: 0;">
+                            <div class="input-group">
+                                <label>Username</label>
+                                <input type="text" id="tUsername" placeholder="Assign unique username">
+                            </div>
+                            <div class="input-group">
+                                <label>Password</label>
+                                <input type="password" id="tPassword" placeholder="Assign password">
+                            </div>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                            These credentials will be used for login on the teacher portal.
+                        </p>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="toggleTeacherForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Attendance Modal -->
+            <div id="attendanceModal" class="modal-overlay">
+                <div class="modal-content">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 id="attModalTitle">Attendance</h3>
+                        <button onclick="closeAttendanceModal()" style="background:none; border:none; cursor:pointer;">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                    <div style="text-align: center; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Full Month Record (Present/Absent)
+                    </div>
+                    <div class="attendance-grid" id="attendanceGrid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teachers List -->
+            <div class="table-container">
+                <table id="teachersTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Father's Name</th>
+                            <th>Subject</th>
+                            <th>Phone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teacherTableBody">
+                        <!-- Data will be populated here by JS -->
+                    </tbody>
+                </table>
+                <div id="noTeacherDataMessage"
+                    style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                    No teachers found. Add one to get started!
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="success-overlay">
+        <div class="success-modal">
+            <div class="success-icon-wrap">
+                <i data-lucide="check-circle"></i>
+            </div>
+            <h2 id="successTitle">Success!</h2>
+            <p id="successMessage" style="color: var(--text-secondary); margin: 1rem 0 2rem;"></p>
+            <button class="btn btn-primary" style="width: 100%;" onclick="closeSuccessModal()">Great!</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

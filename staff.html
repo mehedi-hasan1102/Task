@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Staff - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .form-container {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-container.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: var(--transition);
+        }
+
+        .btn-edit {
+            background: #eff6ff;
+            color: var(--primary-color);
+        }
+
+        .btn-edit:hover {
+            background: #dbeafe;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item active">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Staff Management</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="staffSearchInput" placeholder="Search by name or designation...">
+                    </div>
+                </div>
+            </header>
+
+            <div class="toolbar">
+                <div style="font-weight: 600; color: var(--text-secondary);">
+                    Total Staff: <span id="totalStaffCount" style="color: var(--primary-color);">0</span>
+                </div>
+                <button class="btn btn-primary" onclick="toggleStaffForm()">
+                    <i data-lucide="plus"></i> Add New Staff Member
+                </button>
+            </div>
+
+            <!-- Add/Edit Form -->
+            <div id="staffFormContainer" class="form-container">
+                <h3 style="margin-bottom: 1.5rem;" id="staffFormTitle">Add New Staff Member</h3>
+                <form id="staffForm">
+                    <input type="hidden" id="staffId">
+
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Full Name</label>
+                            <input type="text" id="sFullName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Father's Name</label>
+                            <input type="text" id="sFatherName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Designation</label>
+                            <input type="text" id="sDesignation" placeholder="Enter designation" required>
+                        </div>
+                        <div class="input-group">
+                            <label>CNIC</label>
+                            <input type="text" id="sCnic" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Mobile No</label>
+                            <input type="tel" id="sPhone" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Address</label>
+                            <input type="text" id="sAddress" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Gender</label>
+                            <select id="sGender" required
+                                style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Monthly Salary</label>
+                            <input type="number" id="sSalary" required>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                        <button type="submit" class="btn btn-primary">Save Staff Member</button>
+                        <button type="button" class="btn btn-outline" onclick="toggleStaffForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Staff List -->
+            <div class="table-container">
+                <table id="staffTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Father's Name</th>
+                            <th>Designation</th>
+                            <th>CNIC</th>
+                            <th>Phone</th>
+                            <th>Salary</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staffTableBody">
+                        <!-- Data populated by JS -->
+                    </tbody>
+                </table>
+                <div id="noStaffDataMessage"
+                    style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                    No staff members found. Add one to get started!
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

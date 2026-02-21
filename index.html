@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apexiums School Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Real-Time SQL Sync -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <div class="login-layout">
+        <div class="login-card">
+
+            <!-- New Single Column Design -->
+            <div class="login-header">
+                <div class="login-icon-circle">
+                    <i data-lucide="home"></i>
+                </div>
+                <h2 class="login-title">Apexiums System</h2>
+                <p class="login-subtitle">Sign in to your account</p>
+            </div>
+
+            <div class="login-body">
+                <form id="loginForm">
+                    <div class="input-group">
+                        <label for="email">Username / Email</label>
+                        <div style="position: relative;">
+                            <input type="text" id="email" placeholder="Enter username or email" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="password" placeholder="Enter your password" required>
+                            <span id="togglePasswordBtn"
+                                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; display: flex; align-items: center;">
+                                <i data-lucide="eye" style="color: var(--text-secondary);"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="remember-me">
+                        <input type="checkbox" id="remember">
+                        <label for="remember">Remember me</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-success" style="width: 100%;">Sign In</button>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

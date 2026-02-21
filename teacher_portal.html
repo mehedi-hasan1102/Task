@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Portal - EduCore</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --portal-bg: #fdfdfd;
+        }
+
+        body {
+            background: var(--portal-bg);
+        }
+
+        .portal-header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            border-radius: 0 0 40px 40px;
+            margin-bottom: -40px;
+        }
+
+        .portal-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .user-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .user-avatar {
+            width: 100px;
+            height: 100px;
+            background: #f0bdd1;
+            color: #be185d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            border-left: 4px solid #be185d;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="portal-header">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        <h1>Faculty Portal</h1>
+        <p>Management & Academic Dashboard</p>
+    </header>
+
+    <div class="portal-container">
+        <div class="user-card">
+            <div class="user-avatar" id="avatarLetter">T</div>
+            <div>
+                <h2 id="teacherName">Loading...</h2>
+                <p style="color: var(--text-secondary)" id="teacherSubject">Subject: -</p>
+                <div class="credential-badge" style="margin-top: 1rem; background: #fce7f3; color: #be185d;">
+                    <i data-lucide="award" width="16"></i>
+                    Official Staff Account
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Monthly Salary
+                </div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #be185d;" id="salaryAmount">PKR 0</div>
+            </div>
+            <div class="stat-box" style="border-left-color: #3b82f6;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Teacher ID</div>
+                <div style="font-size: 1.25rem; font-weight: 600;" id="teacherId">-</div>
+            </div>
+            <div class="stat-box" style="border-left-color: #10b981;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Status</div>
+                <div style="font-size: 1.25rem; font-weight: 600; color: #10b981;">Active</div>
+            </div>
+        </div>
+
+        <div class="user-card" style="margin-top: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem;">
+            <h3>Professional Profile</h3>
+            <div style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <strong>Qualification:</strong>
+                    <span id="qualification" style="color: var(--text-secondary)">-</span>
+                </div>
+                <div>
+                    <strong>Gender:</strong>
+                    <span id="gender" style="color: var(--text-secondary)">-</span>
+                </div>
+                <div>
+                    <strong>Phone:</strong>
+                    <span id="phone" style="color: var(--text-secondary)">-</span>
+                </div>
+                <div>
+                    <strong>Address:</strong>
+                    <span id="address" style="color: var(--text-secondary)">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.') || window.location.hostname.startsWith('10.') || window.location.hostname.startsWith('172.');
+        const BACKEND_URL = isLocalhost ? `${window.location.protocol}//${window.location.hostname}:3000` : 'https://school-management-backend.onrender.com';
+        const API_BASE_URL = `${BACKEND_URL}/api`;
+        const STORAGE_KEY_TEACHERS = 'eduCore_teachers';
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+
+        if (!loggedInUser || loggedInUser.role !== 'Teacher') {
+            window.location.href = 'index.html';
+        }
+
+        // Initialize Real-Time Sync
+        if (typeof io !== 'undefined') {
+            const socket = io(BACKEND_URL);
+            socket.on('teachers_update', (data) => {
+                localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(data));
+                loadData(); // Re-render instantly
+            });
+        }
+
+        async function syncWithSQL() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/teachers`);
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(data));
+                    loadData();
+                }
+            } catch (e) {
+                console.warn("SQL Server Offline. Using local data.");
+            }
+        }
+
+        function loadData() {
+            const teachers = JSON.parse(localStorage.getItem(STORAGE_KEY_TEACHERS)) || [];
+            const teacher = teachers.find(t => t.id === loggedInUser.id);
+
+            if (teacher) {
+                document.getElementById('teacherName').innerText = teacher.fullName;
+                document.getElementById('avatarLetter').innerText = teacher.fullName.charAt(0).toUpperCase();
+                document.getElementById('teacherSubject').innerText = `Subject: ${teacher.subject}`;
+                document.getElementById('salaryAmount').innerText = `PKR ${parseInt(teacher.salary || 0).toLocaleString()}`;
+                document.getElementById('teacherId').innerText = `#${teacher.id.substring(0, 8)}`;
+                document.getElementById('qualification').innerText = teacher.qualification || '-';
+                document.getElementById('gender').innerText = teacher.gender || '-';
+                document.getElementById('phone').innerText = teacher.phone || '-';
+                document.getElementById('address').innerText = teacher.address || '-';
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html';
+        }
+
+        window.onload = () => {
+            syncWithSQL(); // Pull latest Faculty data from SQL
+            loadData();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+
+</html>

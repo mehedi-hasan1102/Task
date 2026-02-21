@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Fees - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #20b0a4 0%, #159a8f 100%);
+            --surface-hover: #f1f5f9;
+        }
+
+        .classes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .fee-card {
+            background: var(--surface-color);
+            border: 1px solid #eef2f6;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 70px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .fee-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(32, 176, 164, 0.1);
+        }
+
+        .class-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .class-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .fees-section {
+            display: none;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .fees-section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .back-btn:hover {
+            background: var(--surface-hover);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .status-paid-badge {
+            background: #dcfce7;
+            color: #166534;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-unpaid-badge {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .month-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            margin-bottom: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .month-row:hover {
+            transform: scale(1.01);
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-md);
+        }
+
+        .month-name {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .month-status {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .toggle-fee-btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .btn-mark-paid {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-mark-paid:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(32, 176, 164, 0.3);
+        }
+
+        .btn-mark-unpaid {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-mark-unpaid:hover {
+            background: #dc2626;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .student-list-item {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .student-list-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .student-list-item td {
+            font-weight: 500;
+        }
+
+        #feesStudentTable th {
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            letter-spacing: 0.05rem;
+        }
+
+        .search-results-info {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(32, 176, 164, 0.05);
+            border-radius: 0.75rem;
+            border: 1px dashed var(--primary-color);
+            display: none;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item active">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1 id="pageTitle">Fee Management</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="feeSearchInput" placeholder="Search students by name or roll no...">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Search Results Help -->
+            <div id="searchResultsInfo" class="search-results-info">
+                <p style="color: var(--primary-color); font-weight: 600; font-size: 0.9rem;">
+                    <i data-lucide="info" size="16"
+                        style="display:inline; vertical-align:middle; margin-right: 4px;"></i>
+                    Showing matches for "<span id="searchText"></span>" across all classes.
+                </p>
+            </div>
+
+            <!-- Grid View (Classes) -->
+            <div id="feesGridView">
+                <div class="classes-grid" id="feesClassGrid">
+                    <!-- Classes will be generated here -->
+                </div>
+            </div>
+
+            <!-- Students List View -->
+            <div id="feesTableView" class="fees-section">
+                <div class="section-header">
+                    <div>
+                        <h2 id="selectedClassTitle" style="margin-bottom: 0.25rem;">Class Students</h2>
+                        <p id="selectedClassSubtitle" style="color: var(--text-secondary); font-size: 0.9rem;">Select a
+                            student to manage monthly fee records</p>
+                    </div>
+                    <button class="back-btn" onclick="backToFeesList()">
+                        <i data-lucide="arrow-left" size="18"></i> Back to Classes
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table id="feesStudentTable">
+                        <thead>
+                            <tr>
+                                <th>Roll No</th>
+                                <th>Student Name</th>
+                                <th>Father Name</th>
+                                <th>Current Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentListTableBody">
+                            <!-- Students will be populated here -->
+                        </tbody>
+                    </table>
+                    <div id="noFeeData"
+                        style="text-align: center; padding: 4rem; color: var(--text-secondary); display: none;">
+                        <i data-lucide="search-x" size="48" style="margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <p>No students found matching your criteria.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Individual Student Fee Record View -->
+            <div id="studentFeeRecordView" class="fees-section">
+                <div class="section-header">
+                    <div>
+                        <h2 id="selectedStudentName" style="margin-bottom: 0.25rem; color: var(--primary-color);">
+                            Student Fee Record</h2>
+                        <p id="selectedStudentDetails"
+                            style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;">
+                            Roll No: <span id="spanRollNo" style="color: var(--text-primary);"></span> |
+                            Class: <span id="spanClass" style="color: var(--text-primary);"></span>
+                        </p>
+                    </div>
+                    <button class="back-btn" onclick="backToStudentList()">
+                        <i data-lucide="arrow-left" size="18"></i> Back to Students
+                    </button>
+                </div>
+
+                <div id="monthListContainer">
+                    <!-- Monthly rows will be generated here -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFeesClassGrid();
+
+            // Search implementation
+            const searchInput = document.getElementById('feeSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const tableView = document.getElementById('feesTableView');
+                    const gridView = document.getElementById('feesGridView');
+                    const recordView = document.getElementById('studentFeeRecordView');
+                    const searchInfo = document.getElementById('searchResultsInfo');
+
+                    const term = e.target.value.toLowerCase().trim();
+
+                    if (term === '') {
+                        searchInfo.style.display = 'none';
+                        if (!tableView.classList.contains('active') && !recordView.classList.contains('active')) {
+                            backToFeesList();
+                        } else if (tableView.classList.contains('active') && tableView.dataset.classId !== 'search_results') {
+                            const classId = tableView.dataset.classId;
+                            renderClassStudentList(classId);
+                        } else {
+                            backToFeesList();
+                        }
+                        return;
+                    }
+
+                    // Global search logic
+                    gridView.style.display = 'none';
+                    recordView.classList.remove('active');
+                    tableView.classList.add('active');
+                    tableView.dataset.classId = 'search_results';
+
+                    document.getElementById('selectedClassTitle').innerText = 'Search Results';
+                    document.getElementById('selectedClassSubtitle').innerText = 'Students matching details in all classes';
+                    document.getElementById('pageTitle').innerText = 'Searching Results...';
+
+                    document.getElementById('searchText').innerText = term;
+                    searchInfo.style.display = 'block';
+
+                    renderClassStudentList('all', term);
+                });
+            }
+        });
+
+        const feeClasses = [
+            { id: 'play', name: 'Play Group', icon: 'baby', keywords: ['play', 'pg', 'playgroup', 'play group', 'play-group'] },
+            { id: 'nursery', name: 'Nursery', icon: 'palette', keywords: ['nursery', 'nursary', 'nur'] },
+            { id: 'prep', name: 'Prep', icon: 'pencil', keywords: ['prep', 'preschool', 'pre'] },
+            { id: '1', name: 'Class One', icon: 'book', keywords: ['1', 'one', '1st', 'class 1', 'class one'] },
+            { id: '2', name: 'Class Two', icon: 'book', keywords: ['2', 'two', '2nd', 'class 2', 'class two'] },
+            { id: '3', name: 'Class Three', icon: 'book', keywords: ['3', 'three', '3rd', 'class 3', 'class three'] },
+            { id: '4', name: 'Class Four', icon: 'book', keywords: ['4', 'four', '4th', 'class 4', 'class four'] },
+            { id: '5', name: 'Class Five', icon: 'book', keywords: ['5', 'five', '5th', 'class 5', 'class five'] },
+            { id: '6', name: 'Class Six', icon: 'graduation-cap', keywords: ['6', 'six', '6th', 'class 6', 'class six'] },
+            { id: '7', name: 'Class Seven', icon: 'graduation-cap', keywords: ['7', 'seven', '7th', 'class 7', 'class seven'] },
+            { id: '8', name: 'Class Eight', icon: 'graduation-cap', keywords: ['8', 'eight', '8th', 'class 8', 'class eight'] },
+            { id: '9', name: 'Class Nine', icon: 'flask-conical', keywords: ['9', 'nine', '9th', 'class 9', 'class nine'] },
+            { id: '10', name: 'Class Ten', icon: 'flask-conical', keywords: ['10', 'ten', '10th', 'class 10', 'class ten'] },
+        ];
+
+        const monthsList = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+
+        function renderFeesClassGrid() {
+            const grid = document.getElementById('feesClassGrid');
+            const students = getData(STORAGE_KEY_STUDENTS);
+            grid.innerHTML = '';
+
+            feeClasses.forEach(cls => {
+                const classStudents = students.filter(s => {
+                    const sClass = (s.classGrade || '').toLowerCase().trim();
+                    return cls.keywords.some(k => sClass === k || sClass === `class ${k}`);
+                });
+
+                const card = document.createElement('div');
+                card.className = 'fee-card';
+                card.onclick = () => showClassStudents(cls.id);
+
+                card.innerHTML = `
+                    <div class="class-name">${cls.name}</div>
+                    ${classStudents.length > 0 ? `<div class="class-badge">${classStudents.length}</div>` : ''}
+                `;
+                grid.appendChild(card);
+            });
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function showClassStudents(classId) {
+            const cls = feeClasses.find(c => c.id === classId);
+            if (!cls) return;
+
+            document.getElementById('feesGridView').style.display = 'none';
+            document.getElementById('searchResultsInfo').style.display = 'none';
+            const tableView = document.getElementById('feesTableView');
+            tableView.classList.add('active');
+            tableView.dataset.classId = classId;
+
+            document.getElementById('selectedClassTitle').innerText = cls.name + ' Students';
+            document.getElementById('selectedClassSubtitle').innerText = 'Click a row to manage monthly fee records';
+            document.getElementById('pageTitle').innerText = 'Fees: ' + cls.name;
+
+            renderClassStudentList(classId);
+        }
+
+        function renderClassStudentList(classId, term = '') {
+            const tbody = document.getElementById('studentListTableBody');
+            const noData = document.getElementById('noFeeData');
+            const students = getData(STORAGE_KEY_STUDENTS);
+
+            let filteredStudents = [];
+
+            if (classId === 'all') {
+                filteredStudents = students;
+            } else {
+                const cls = feeClasses.find(c => c.id === classId);
+                filteredStudents = students.filter(s => {
+                    const sClass = (s.classGrade || '').toLowerCase().trim();
+                    return cls.keywords.some(k => sClass === k || sClass === `class ${k}`);
+                });
+            }
+
+            if (term) {
+                filteredStudents = filteredStudents.filter(s =>
+                    (s.fullName || '').toLowerCase().includes(term) ||
+                    (s.rollNo || '').toString().toLowerCase().includes(term) ||
+                    (s.fatherName || '').toLowerCase().includes(term)
+                );
+            }
+
+            tbody.innerHTML = '';
+
+            if (filteredStudents.length === 0) {
+                noData.style.display = 'block';
+                document.getElementById('feesStudentTable').style.display = 'none';
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            noData.style.display = 'none';
+            document.getElementById('feesStudentTable').style.display = 'table';
+
+            filteredStudents.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = 'student-list-item';
+                tr.onclick = () => showStudentFeeRecord(s.id);
+
+                // Get current month status
+                const currentMonthIdx = new Date().getMonth();
+                const currentMonthName = monthsList[currentMonthIdx];
+                const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
+                const studentMonthly = monthlyFees[s.id] || {};
+                const isPaidThisMonth = studentMonthly[currentMonthName] === 'Paid';
+
+                const statusClass = isPaidThisMonth ? 'status-paid' : 'status-pending';
+                const statusLabel = isPaidThisMonth ? 'Paid (' + currentMonthName + ')' : 'Unpaid (' + currentMonthName + ')';
+
+                tr.innerHTML = `
+                    <td><strong>#${s.rollNo}</strong></td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap: 0.75rem;">
+                            <div style="width:32px; height:32px; border-radius:50%; background:rgba(32, 176, 164, 0.1); color:var(--primary-color); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem;">
+                                ${s.fullName.charAt(0).toUpperCase()}
+                            </div>
+                            ${s.fullName}
+                        </div>
+                    </td>
+                    <td>${s.fatherName || '-'}</td>
+                    <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                    <td>
+                        <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 0.5rem;">View Record</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function showStudentFeeRecord(studentId) {
+            const students = getData(STORAGE_KEY_STUDENTS);
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            document.getElementById('feesTableView').classList.remove('active');
+            document.getElementById('searchResultsInfo').style.display = 'none';
+            const recordView = document.getElementById('studentFeeRecordView');
+            recordView.classList.add('active');
+            recordView.dataset.studentId = studentId;
+
+            document.getElementById('selectedStudentName').innerText = student.fullName;
+            document.getElementById('spanRollNo').innerText = student.rollNo;
+            document.getElementById('spanClass').innerText = student.classGrade;
+            document.getElementById('pageTitle').innerText = 'Record: ' + student.fullName;
+
+            renderMonthlyFeeRecord(studentId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderMonthlyFeeRecord(studentId) {
+            const container = document.getElementById('monthListContainer');
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
+            const studentRecord = monthlyFees[studentId] || {};
+
+            container.innerHTML = '';
+
+            monthsList.forEach(month => {
+                const isPaid = studentRecord[month] === 'Paid';
+                const row = document.createElement('div');
+                row.className = 'month-row';
+
+                row.innerHTML = `
+                    <div class="month-name">${month}</div>
+                    <div class="month-status">
+                        <span class="${isPaid ? 'status-paid-badge' : 'status-unpaid-badge'}">
+                            <i data-lucide="${isPaid ? 'check-circle' : 'clock'}"></i>
+                            ${isPaid ? 'Paid' : 'Unpaid'}
+                        </span>
+                        <button class="toggle-fee-btn ${isPaid ? 'btn-mark-unpaid' : 'btn-mark-paid'}" onclick="toggleMonthFee('${studentId}', '${month}')">
+                            ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function toggleMonthFee(studentId, month) {
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
+            if (!monthlyFees[studentId]) monthlyFees[studentId] = {};
+
+            const currentStatus = monthlyFees[studentId][month];
+            const newStatus = currentStatus === 'Paid' ? 'Unpaid' : 'Paid';
+            monthlyFees[studentId][month] = newStatus;
+
+            localStorage.setItem(STORAGE_KEY_MONTHLY_FEES, JSON.stringify(monthlyFees));
+
+            // Sync with global student status if it's the current month
+            const currentMonthName = monthsList[new Date().getMonth()];
+            if (month === currentMonthName) {
+                const students = getData(STORAGE_KEY_STUDENTS);
+                const idx = students.findIndex(s => s.id === studentId);
+                if (idx !== -1) {
+                    students[idx].feesStatus = (newStatus === 'Paid' ? 'Paid' : 'Pending');
+                    saveData(STORAGE_KEY_STUDENTS, students);
+                }
+            }
+
+            renderMonthlyFeeRecord(studentId);
+        }
+
+        function backToFeesList() {
+            document.getElementById('feesTableView').classList.remove('active');
+            document.getElementById('studentFeeRecordView').classList.remove('active');
+            document.getElementById('searchResultsInfo').style.display = 'none';
+            document.getElementById('feesGridView').style.display = 'block';
+            document.getElementById('pageTitle').innerText = 'Fee Management';
+            document.getElementById('feeSearchInput').value = '';
+            renderFeesClassGrid();
+        }
+
+        function backToStudentList() {
+            document.getElementById('studentFeeRecordView').classList.remove('active');
+            const tableView = document.getElementById('feesTableView');
+            tableView.classList.add('active');
+
+            const classId = tableView.dataset.classId;
+            if (classId === 'search_results') {
+                document.getElementById('pageTitle').innerText = 'Searching Results...';
+                document.getElementById('searchResultsInfo').style.display = 'block';
+            } else {
+                const cls = feeClasses.find(c => c.id === classId);
+                document.getElementById('pageTitle').innerText = 'Fees: ' + (cls ? cls.name : '');
+            }
+
+            renderClassStudentList(classId, document.getElementById('feeSearchInput').value.toLowerCase());
+        }
+    </script>
+</body>
+
+</html>

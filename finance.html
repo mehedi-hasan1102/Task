@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance & Fees - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-paid {
+            background-color: #d1fae5;
+            color: #059669;
+        }
+
+        .status-pending {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-failed {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item active">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Finance & Fees</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="financeSearchInput" placeholder="Search student name...">
+                    </div>
+                    <div class="notification-bell" id="notificationBell">
+                        <i data-lucide="bell" size="22"></i>
+                        <span class="notification-badge" id="notifBadge">0</span>
+
+                        <div class="notif-panel" id="notificationPanel">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
+                            </div>
+                            <div class="notif-list" id="notificationList">
+                                <!-- Notifications added via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Bill Type Cards -->
+            <div class="stats-grid"
+                style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="card bill-card" onclick="selectBillCategory('Electricity')" id="card-Electricity"
+                    style="cursor: pointer; border: 2px solid transparent;">
+                    <div class="card-icon" style="background: rgba(251, 191, 36, 0.1); color: #d97706;"><i
+                            data-lucide="zap"></i></div>
+                    <div class="card-value" style="font-size: 1.25rem; margin-top: 1rem;">Electricity</div>
+                    <div class="card-title">Manage Bill</div>
+                </div>
+
+                <div class="card bill-card" onclick="selectBillCategory('Gas')" id="card-Gas"
+                    style="cursor: pointer; border: 2px solid transparent;">
+                    <div class="card-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><i
+                            data-lucide="flame"></i></div>
+                    <div class="card-value" style="font-size: 1.25rem; margin-top: 1rem;">Gas</div>
+                    <div class="card-title">Manage Bill</div>
+                </div>
+
+                <div class="card bill-card" onclick="selectBillCategory('Internet')" id="card-Internet"
+                    style="cursor: pointer; border: 2px solid transparent;">
+                    <div class="card-icon" style="background: rgba(59, 130, 246, 0.1); color: #2563eb;"><i
+                            data-lucide="wifi"></i></div>
+                    <div class="card-value" style="font-size: 1.25rem; margin-top: 1rem;">Internet</div>
+                    <div class="card-title">Manage Bill</div>
+                </div>
+
+                <div class="card bill-card" onclick="selectBillCategory('Building Rent')" id="card-Rent"
+                    style="cursor: pointer; border: 2px solid transparent;">
+                    <div class="card-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;"><i
+                            data-lucide="home"></i></div>
+                    <div class="card-value" style="font-size: 1.25rem; margin-top: 1rem;">Building Rent</div>
+                    <div class="card-title">Manage Bill</div>
+                </div>
+
+                <div class="card bill-card" onclick="showPaidHistory()" id="card-History"
+                    style="cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                    <div class="card-icon" style="background: white; color: #166534;"><i data-lucide="history"></i>
+                    </div>
+                    <div class="card-value" style="font-size: 1.25rem; margin-top: 1rem;">Paid History</div>
+                    <div class="card-title">Verification Center</div>
+                </div>
+            </div>
+
+            <!-- Active Bill Section (Hidden until selected) -->
+            <div id="billDetailsSection" style="display: none;">
+                <div class="toolbar">
+                    <div>
+                        <h2 class="table-title" id="selectedCategoryTitle">Bill Records</h2>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">View and add bills for this category
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" onclick="toggleBillForm()">
+                        <i data-lucide="plus"></i> Add New Bill
+                    </button>
+                </div>
+
+                <!-- Add Form -->
+                <div id="billFormContainer" class="form-container"
+                    style="display: none; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem; border: 1px solid var(--border-color);">
+                    <div class="form-header"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 id="billFormTitle" style="color: var(--text-primary);">Add Bill</h3>
+                        <button onclick="toggleBillForm()" style="background: none; border: none; cursor: pointer;"><i
+                                data-lucide="x" style="color: var(--text-secondary);"></i></button>
+                    </div>
+                    <form id="billForm">
+                        <input type="hidden" id="billId">
+                        <input type="hidden" id="billCategory"> <!-- Hidden, set by selection -->
+
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="input-group">
+                                <label for="billAmount">Amount (PKR)</label>
+                                <input type="number" id="billAmount" placeholder="0" required
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
+                            </div>
+                            <div class="input-group">
+                                <label for="billDate">Date</label>
+                                <input type="date" id="billDate" required
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
+                            </div>
+                            <div class="input-group">
+                                <label for="billStatus">Status</label>
+                                <select id="billStatus"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
+                                    <option value="Paid">Paid</option>
+                                    <option value="Pending">Pending</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="grid-column: span 2;">
+                                <label for="billNote">Description / Note</label>
+                                <input type="text" id="billNote" placeholder="Enter bill description"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px;">
+                            </div>
+                            <div class="input-group" style="grid-column: span 2;">
+                                <label for="billInvoice">Upload Bill Image / Invoice (Optional)</label>
+                                <input type="file" id="billInvoice" accept="image/*"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: white;">
+                                <div id="invoicePreview" style="margin-top: 10px; display: none;">
+                                    <img id="invoiceImgPreview" src=""
+                                        style="max-width: 100%; max-height: 150px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-actions"
+                            style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                            <button type="button" class="btn btn-secondary" onclick="toggleBillForm()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Expense</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Table -->
+                <div class="table-container">
+                    <table id="financeTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financeTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                    <div id="noFinanceData"
+                        style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                        No records for this category yet.
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectPrompt" style="text-align: center; margin-top: 4rem; color: var(--text-secondary);">
+                <i data-lucide="mouse-pointer-2" size="48" style="opacity: 0.2;"></i>
+                <p style="margin-top: 1rem;">Select a bill category above to view or manage records.</p>
+            </div>
+
+            <!-- Bill Payment Confirmation Modal -->
+            <div id="paymentModal" class="modal-overlay">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 id="paymentModalTitle">Confirm Bill Payment</h3>
+                        <button onclick="closePaymentModal()" style="background:none; border:none; cursor:pointer;">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+
+                    <div id="paymentBillDetails"
+                        style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary);">Bill ID:</span>
+                            <span id="pModalBillId" style="font-weight: 600;">--</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary);">Category:</span>
+                            <span id="pModalCategory" style="font-weight: 600;">--</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-secondary);">Date:</span>
+                            <span id="pModalDate" style="font-weight: 600;">--</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Amount:</span>
+                            <span id="pModalAmount" style="font-weight: 700; color: var(--primary-color);">PKR 0</span>
+                        </div>
+                    </div>
+
+                    <form id="paymentConfirmForm">
+                        <input type="hidden" id="pBillId">
+                        <div class="input-group">
+                            <label for="paymentReceipt">Upload Payment Receipt (Image)</label>
+                            <input type="file" id="paymentReceipt" accept="image/*" required
+                                style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: white;">
+                            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                                Max size: 2MB. Your receipt will be securely stored for record.
+                            </p>
+                        </div>
+
+                        <div id="receiptPreview" style="margin-top: 1rem; display: none;">
+                            <p style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Receipt Preview:</p>
+                            <img id="receiptImgPreview" src=""
+                                style="width: 100%; max-height: 200px; object-fit: contain; border-radius: 4px; border: 1px solid var(--border-color);">
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">Confirm & Save
+                                Payment</button>
+                            <button type="button" class="btn btn-outline" onclick="closePaymentModal()"
+                                style="flex: 1;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

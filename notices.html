@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Notices - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .form-container {
+            background: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: var(--transition);
+        }
+
+        .btn-edit {
+            background: #eff6ff;
+            color: var(--primary-color);
+        }
+
+        .btn-edit:hover {
+            background: #dbeafe;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: var(--danger-color);
+        }
+
+        .btn-delete:hover {
+            background: #fecaca;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="notices.html" class="nav-item active">
+                    <i data-lucide="megaphone"></i>
+                    <span>Notices</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Notice Management</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="noticeSearchInput" placeholder="Search notices...">
+                    </div>
+                    <div class="notification-bell" id="notificationBell">
+                        <i data-lucide="bell" size="22"></i>
+                        <span class="notification-badge" id="notifBadge">0</span>
+                        <div class="notif-panel" id="notificationPanel">
+                            <div class="notif-header">
+                                <h4>Notifications</h4>
+                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
+                            </div>
+                            <div class="notif-list" id="notificationList"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="toolbar">
+                <div style="font-weight: 600; color: var(--text-secondary);">
+                    Total Notices: <span id="totalNoticeCount" style="color: var(--primary-color);">0</span>
+                </div>
+                <button class="btn btn-primary" onclick="toggleNoticeForm()">
+                    <i data-lucide="plus"></i> Add New Notice
+                </button>
+            </div>
+
+            <div id="noticeFormContainer" class="form-container">
+                <h3 style="margin-bottom: 1.5rem;" id="noticeFormTitle">Add New Notice</h3>
+                <form id="noticeForm">
+                    <input type="hidden" id="noticeId">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Title</label>
+                            <input type="text" id="noticeTitle" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Date</label>
+                            <input type="date" id="noticeDate" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Status</label>
+                            <select id="noticeStatus" required
+                                style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
+                                <option value="Active">Active</option>
+                                <option value="Draft">Draft</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label>Description</label>
+                            <textarea id="noticeDescription" rows="4" required
+                                style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="toggleNoticeForm()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="save"></i> Save Notice
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-container">
+                <table id="noticeTable">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="noticeTableBody"></tbody>
+                </table>
+                <div id="noNoticeDataMessage"
+                    style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                    No notices found. Add one to get started!
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

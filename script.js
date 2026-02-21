@@ -9,6 +9,7 @@ const STORAGE_KEY_TEACHER_ATTENDANCE = 'eduCore_teacher_attendance';
 const STORAGE_KEY_STAFF = 'eduCore_staff';
 const STORAGE_KEY_TEACHER_SALARIES = 'eduCore_teacher_salaries';
 const STORAGE_KEY_NOTICES = 'eduCore_notices';
+const STORAGE_KEY_BANNERS = 'eduCore_banners';
 const STORAGE_KEY_USERS = 'eduCore_users'; // New Key for student/teacher credentials
 
 // === REAL-TIME SQL CONFIGURATION ===
@@ -44,6 +45,12 @@ if (typeof io !== 'undefined') {
     socket.on('notices_update', (data) => {
         localStorage.setItem(STORAGE_KEY_NOTICES, JSON.stringify(data));
         if (window.location.pathname.includes('notices.html')) renderNotices();
+        updateDashboardStats();
+    });
+
+    socket.on('banners_update', (data) => {
+        localStorage.setItem(STORAGE_KEY_BANNERS, JSON.stringify(data));
+        if (window.location.pathname.includes('banners.html')) renderBanners();
         updateDashboardStats();
     });
 }
@@ -83,6 +90,47 @@ async function deleteNoticeFromSQL(id) {
     }
 }
 
+function resolveMediaUrl(mediaPath) {
+    if (!mediaPath) return '';
+    if (mediaPath.startsWith('data:') || mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
+        return mediaPath;
+    }
+    if (mediaPath.startsWith('/')) return `${BACKEND_URL}${mediaPath}`;
+    return mediaPath;
+}
+
+function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+async function upsertBannerToSQL(payload) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/banners/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Banner sync failed');
+        return await res.json();
+    } catch (e) {
+        console.warn("Banner sync skipped (server offline).");
+        return null;
+    }
+}
+
+async function deleteBannerFromSQL(id) {
+    try {
+        await fetch(`${API_BASE_URL}/banners/${id}`, { method: 'DELETE' });
+    } catch (e) {
+        console.warn("Banner delete sync skipped (server offline).");
+    }
+}
+
 async function initialSQLSync() {
     try {
         const sRes = await fetch(`${API_BASE_URL}/students`);
@@ -104,6 +152,14 @@ async function initialSQLSync() {
             const data = await nRes.json();
             localStorage.setItem(STORAGE_KEY_NOTICES, JSON.stringify(data));
             if (typeof renderNotices === 'function') renderNotices();
+            updateDashboardStats();
+        }
+
+        const bRes = await fetch(`${API_BASE_URL}/banners`);
+        if (bRes.ok) {
+            const data = await bRes.json();
+            localStorage.setItem(STORAGE_KEY_BANNERS, JSON.stringify(data));
+            if (typeof renderBanners === 'function') renderBanners();
             updateDashboardStats();
         }
     } catch (e) {
@@ -297,6 +353,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const nSearch = document.getElementById('noticeSearchInput');
         if (nSearch) {
             nSearch.addEventListener('input', (e) => renderNotices(e.target.value.toLowerCase()));
+        }
+    }
+
+    // === BANNERS PAGE ===
+    const bannerForm = document.getElementById('bannerForm');
+    if (bannerForm) {
+        renderBanners(); // Initial Load
+        bannerForm.addEventListener('submit', handleBannerFormSubmit);
+        const bSearch = document.getElementById('bannerSearchInput');
+        if (bSearch) {
+            bSearch.addEventListener('input', (e) => renderBanners(e.target.value.toLowerCase()));
+        }
+        const bannerImageInput = document.getElementById('bannerImage');
+        if (bannerImageInput) {
+            bannerImageInput.addEventListener('change', previewBannerInput);
         }
     }
 
@@ -830,17 +901,19 @@ function updateDashboardStats() {
     const t = getData(STORAGE_KEY_TEACHERS);
     const staff = getData(STORAGE_KEY_STAFF);
     const notices = getData(STORAGE_KEY_NOTICES);
+    const banners = getData(STORAGE_KEY_BANNERS);
 
     if (document.getElementById('dashStudentCount')) document.getElementById('dashStudentCount').innerText = s.length || '0';
     if (document.getElementById('dashTeacherCount')) document.getElementById('dashTeacherCount').innerText = t.length || '0';
     if (document.getElementById('dashStaffCount')) document.getElementById('dashStaffCount').innerText = staff.length || '0';
     if (document.getElementById('dashNoticeCount')) document.getElementById('dashNoticeCount').innerText = notices.length || '0';
+    if (document.getElementById('dashBannerCount')) document.getElementById('dashBannerCount').innerText = banners.length || '0';
 
-    // Calculate Total Revenue (Sum of monthlyFee for students with feesStatus === 'Paid')
+    // Calculate Total Revenue (Sum of fees/monthlyFee for students with feesStatus === 'Paid')
     if (document.getElementById('dashRevenue')) {
         const totalRevenue = s.reduce((sum, student) => {
             if (student.feesStatus === 'Paid') {
-                return sum + (parseInt(student.monthlyFee) || 0);
+                return sum + (parseInt(student.fees || student.monthlyFee) || 0);
             }
             return sum;
         }, 0);
@@ -987,6 +1060,198 @@ function deleteNotice(id) {
 }
 
 // =======================================================
+// ==================== BANNER LOGIC =====================
+// =======================================================
+
+function toggleBannerForm(editMode = false) {
+    const container = document.getElementById('bannerFormContainer');
+    const form = document.getElementById('bannerForm');
+    const title = document.getElementById('bannerFormTitle');
+    if (!container || !form || !title) return;
+
+    if (container.style.display === 'block' && !editMode) {
+        container.style.display = 'none';
+        form.reset();
+        document.getElementById('bannerId').value = '';
+        document.getElementById('existingBannerPath').value = '';
+        const preview = document.getElementById('bannerPreviewWrap');
+        if (preview) preview.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    if (!editMode) {
+        form.reset();
+        document.getElementById('bannerId').value = '';
+        document.getElementById('existingBannerPath').value = '';
+        document.getElementById('bannerStatus').value = 'Active';
+        title.innerText = 'Add New Banner';
+        const preview = document.getElementById('bannerPreviewWrap');
+        if (preview) preview.style.display = 'none';
+    } else {
+        title.innerText = 'Edit Banner';
+    }
+}
+
+function getBannerStatusClass(status) {
+    return status === 'Active' ? 'status-paid' : 'status-failed';
+}
+
+function previewBannerInput() {
+    const fileInput = document.getElementById('bannerImage');
+    const img = document.getElementById('bannerPreviewImage');
+    const wrap = document.getElementById('bannerPreviewWrap');
+    if (!fileInput || !img || !wrap || !fileInput.files.length) return;
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        img.src = event.target.result;
+        wrap.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function handleBannerFormSubmit(e) {
+    e.preventDefault();
+
+    const idField = document.getElementById('bannerId');
+    const isEdit = idField.value !== '';
+    const bannerId = isEdit ? idField.value : Date.now().toString();
+
+    const fileInput = document.getElementById('bannerImage');
+    const status = document.getElementById('bannerStatus').value;
+    const existingPath = document.getElementById('existingBannerPath').value || '';
+
+    let imageData = null;
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        imageData = await readFileAsDataURL(fileInput.files[0]);
+    }
+
+    if (!isEdit && !imageData) {
+        alert('Please upload a banner image.');
+        return;
+    }
+
+    const payload = {
+        id: bannerId,
+        status,
+        imagePath: existingPath,
+        imageData
+    };
+
+    let synced = false;
+    const sqlResult = await upsertBannerToSQL(payload);
+    if (sqlResult && sqlResult.success && Array.isArray(sqlResult.banners)) {
+        localStorage.setItem(STORAGE_KEY_BANNERS, JSON.stringify(sqlResult.banners));
+        synced = true;
+    }
+
+    if (!synced) {
+        const finalPath = imageData || existingPath;
+        if (!finalPath) {
+            alert('Banner image is required.');
+            return;
+        }
+
+        const localBanner = {
+            id: bannerId,
+            imagePath: finalPath,
+            status
+        };
+        let banners = getData(STORAGE_KEY_BANNERS);
+        if (isEdit) {
+            const index = banners.findIndex(b => b.id === bannerId);
+            if (index !== -1) banners[index] = localBanner;
+        } else {
+            banners.push(localBanner);
+        }
+        localStorage.setItem(STORAGE_KEY_BANNERS, JSON.stringify(banners));
+    }
+
+    toggleBannerForm();
+    renderBanners();
+    updateDashboardStats();
+    pushNotification('Banner Updated', 'Banner saved successfully.', 'info');
+}
+
+function renderBanners(term = '') {
+    const tbody = document.getElementById('bannerTableBody');
+    if (!tbody) return;
+    if (typeof term !== 'string') term = '';
+
+    const banners = getData(STORAGE_KEY_BANNERS);
+    const filtered = banners
+        .filter(b =>
+            (b.status && b.status.toLowerCase().includes(term)) ||
+            (b.imagePath && b.imagePath.toLowerCase().includes(term))
+        )
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    const totalCountEl = document.getElementById('totalBannerCount');
+    if (totalCountEl) totalCountEl.innerText = filtered.length;
+
+    tbody.innerHTML = '';
+    const noData = document.getElementById('noBannerDataMessage');
+
+    if (filtered.length === 0) {
+        if (noData) noData.style.display = 'block';
+        return;
+    }
+    if (noData) noData.style.display = 'none';
+
+    filtered.forEach(b => {
+        const imageUrl = resolveMediaUrl(b.imagePath);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <img src="${imageUrl}" alt="Banner" style="width:130px; height:55px; object-fit:cover; border-radius:8px; border:1px solid var(--border-color);">
+            </td>
+            <td style="font-size:0.82rem; color:var(--text-secondary);">${b.imagePath || '-'}</td>
+            <td><span class="status-badge ${getBannerStatusClass(b.status)}">${b.status || 'Active'}</span></td>
+            <td>
+                <button class="action-btn btn-edit" onclick="editBanner('${b.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
+                <button class="action-btn btn-delete" onclick="deleteBanner('${b.id}')"><i data-lucide="trash-2" width="14"></i></button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function editBanner(id) {
+    const banners = getData(STORAGE_KEY_BANNERS);
+    const banner = banners.find(b => b.id === id);
+    if (!banner) return;
+
+    toggleBannerForm(true);
+    document.getElementById('bannerId').value = banner.id;
+    document.getElementById('existingBannerPath').value = banner.imagePath || '';
+    document.getElementById('bannerStatus').value = banner.status || 'Active';
+
+    const previewWrap = document.getElementById('bannerPreviewWrap');
+    const previewImage = document.getElementById('bannerPreviewImage');
+    if (previewWrap && previewImage && banner.imagePath) {
+        previewImage.src = resolveMediaUrl(banner.imagePath);
+        previewWrap.style.display = 'block';
+    }
+}
+
+function deleteBanner(id) {
+    if (!confirm('Delete this banner?')) return;
+
+    let banners = getData(STORAGE_KEY_BANNERS);
+    banners = banners.filter(b => b.id !== id);
+    localStorage.setItem(STORAGE_KEY_BANNERS, JSON.stringify(banners));
+    deleteBannerFromSQL(id);
+
+    renderBanners();
+    updateDashboardStats();
+    pushNotification('Banner Deleted', 'A banner has been removed.', 'alert');
+}
+
+// =======================================================
 // ==================== STUDENT LOGIC ====================
 // =======================================================
 
@@ -1056,7 +1321,12 @@ function handleStudentFormSubmit(e) {
 
     const usernameInput = document.getElementById('username').value;
     const studentPasswordInput = document.getElementById('studentPassword').value;
-    const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '0';
+    const contactNoInput = document.getElementById('contactNo')
+        ? document.getElementById('contactNo').value
+        : (document.getElementById('parentPhone') ? document.getElementById('parentPhone').value : '');
+    const feesInput = document.getElementById('fees')
+        ? document.getElementById('fees').value
+        : (document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '0');
 
     // Validation
     if (!usernameInput || !studentPasswordInput) {
@@ -1064,7 +1334,7 @@ function handleStudentFormSubmit(e) {
         if (!document.getElementById('credPanel').classList.contains('active')) toggleStepPanel('credPanel');
         return;
     }
-    if (!monthlyFeeInput || monthlyFeeInput === '0') {
+    if (!feesInput || feesInput === '0') {
         alert('Please set the student fee structure.');
         if (!document.getElementById('feePanel').classList.contains('active')) toggleStepPanel('feePanel');
         return;
@@ -1075,11 +1345,13 @@ function handleStudentFormSubmit(e) {
         fullName: document.getElementById('fullName').value,
         fatherName: document.getElementById('fatherName').value,
         classGrade: document.getElementById('classGrade').value,
-        parentPhone: document.getElementById('parentPhone').value,
+        contactNo: contactNoInput,
+        parentPhone: contactNoInput,
         rollNo: document.getElementById('rollNo').value,
         formB: document.getElementById('formB').value,
         feesStatus: currentStatus,
-        monthlyFee: monthlyFeeInput,
+        fees: feesInput,
+        monthlyFee: feesInput,
         feeFrequency: document.getElementById('feeFrequency') ? document.getElementById('feeFrequency').value : 'Monthly',
         username: usernameInput,
         password: studentPasswordInput,
@@ -1147,7 +1419,7 @@ function renderStudents(term = '') {
                 </div></td>
                 <td>${s.fatherName || '-'}</td>
                 <td>${s.classGrade}</td>
-                <td>${s.parentPhone}</td>
+                <td>${s.contactNo || s.parentPhone || '-'}</td>
                 <td>${s.formB || '-'}</td>
                 <td><span class="status-badge ${statusClass}">${s.feesStatus}</span></td>
                 <td>
@@ -1167,10 +1439,12 @@ function editStudent(s) {
     document.getElementById('fullName').value = s.fullName;
     document.getElementById('fatherName').value = s.fatherName || '';
     document.getElementById('classGrade').value = s.classGrade;
-    document.getElementById('parentPhone').value = s.parentPhone;
+    if (document.getElementById('contactNo')) document.getElementById('contactNo').value = s.contactNo || s.parentPhone || '';
+    if (document.getElementById('parentPhone')) document.getElementById('parentPhone').value = s.contactNo || s.parentPhone || '';
     document.getElementById('rollNo').value = s.rollNo;
     document.getElementById('formB').value = s.formB || '';
-    if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
+    if (document.getElementById('fees')) document.getElementById('fees').value = s.fees || s.monthlyFee || '0';
+    if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.fees || s.monthlyFee || '0';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';
     if (document.getElementById('username')) document.getElementById('username').value = s.username || '';
     if (document.getElementById('studentPassword')) document.getElementById('studentPassword').value = s.password || '';

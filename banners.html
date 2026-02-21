@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Notices - Apexiums School management</title>
+    <title>Banner Management - Apexiums School management</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -92,11 +92,11 @@
                     <i data-lucide="school"></i>
                     <span>Classes</span>
                 </a>
-                <a href="notices.html" class="nav-item active">
+                <a href="notices.html" class="nav-item">
                     <i data-lucide="megaphone"></i>
                     <span>Notices</span>
                 </a>
-                <a href="banners.html" class="nav-item">
+                <a href="banners.html" class="nav-item active">
                     <i data-lucide="image"></i>
                     <span>Banners</span>
                 </a>
@@ -133,11 +133,11 @@
 
         <main class="main-content">
             <header class="header">
-                <h1>Notice Management</h1>
+                <h1>Banner Management</h1>
                 <div class="header-actions">
                     <div class="search-bar">
                         <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
-                        <input type="text" id="noticeSearchInput" placeholder="Search notices...">
+                        <input type="text" id="bannerSearchInput" placeholder="Search by status or path...">
                     </div>
                     <div class="notification-bell" id="notificationBell">
                         <i data-lucide="bell" size="22"></i>
@@ -155,66 +155,61 @@
 
             <div class="toolbar">
                 <div style="font-weight: 600; color: var(--text-secondary);">
-                    Total Notices: <span id="totalNoticeCount" style="color: var(--primary-color);">0</span>
+                    Total Banners: <span id="totalBannerCount" style="color: var(--primary-color);">0</span>
                 </div>
-                <button class="btn btn-primary" onclick="toggleNoticeForm()">
-                    <i data-lucide="plus"></i> Add New Notice
+                <button class="btn btn-primary" onclick="toggleBannerForm()">
+                    <i data-lucide="plus"></i> Add New Banner
                 </button>
             </div>
 
-            <div id="noticeFormContainer" class="form-container">
-                <h3 style="margin-bottom: 1.5rem;" id="noticeFormTitle">Add New Notice</h3>
-                <form id="noticeForm">
-                    <input type="hidden" id="noticeId">
+            <div id="bannerFormContainer" class="form-container">
+                <h3 style="margin-bottom: 1.5rem;" id="bannerFormTitle">Add New Banner</h3>
+                <form id="bannerForm">
+                    <input type="hidden" id="bannerId">
+                    <input type="hidden" id="existingBannerPath">
                     <div class="form-grid">
                         <div class="input-group">
-                            <label>Title</label>
-                            <input type="text" id="noticeTitle" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Date</label>
-                            <input type="date" id="noticeDate" required>
+                            <label>Banner Image</label>
+                            <input type="file" id="bannerImage" accept="image/*">
                         </div>
                         <div class="input-group">
                             <label>Status</label>
-                            <select id="noticeStatus" required
+                            <select id="bannerStatus" required
                                 style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
                                 <option value="Active">Active</option>
-                                <option value="Draft">Draft</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>
-                        <div class="input-group" style="grid-column: 1 / -1;">
-                            <label>Description</label>
-                            <textarea id="noticeDescription" rows="4" required
-                                style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md);"></textarea>
+                        <div id="bannerPreviewWrap" class="input-group" style="display:none;">
+                            <label>Preview</label>
+                            <img id="bannerPreviewImage" src="" alt="Banner preview"
+                                style="width:100%; max-width:360px; height:120px; object-fit:cover; border-radius:10px; border:1px solid var(--border-color);">
                         </div>
                     </div>
                     <div class="form-actions">
-                        <button type="button" class="btn btn-outline" onclick="toggleNoticeForm()">Cancel</button>
+                        <button type="button" class="btn btn-outline" onclick="toggleBannerForm()">Cancel</button>
                         <button type="submit" class="btn btn-primary">
-                            <i data-lucide="save"></i> Save Notice
+                            <i data-lucide="save"></i> Save Banner
                         </button>
                     </div>
                 </form>
             </div>
 
             <div class="table-container">
-                <table id="noticeTable">
+                <table id="bannerTable">
                     <thead>
                         <tr>
-                            <th>Title</th>
-                            <th>Description</th>
-                            <th>Date</th>
+                            <th>Preview</th>
+                            <th>Image Path</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="noticeTableBody"></tbody>
+                    <tbody id="bannerTableBody"></tbody>
                 </table>
-                <div id="noNoticeDataMessage"
+                <div id="noBannerDataMessage"
                     style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
-                    No notices found. Add one to get started!
+                    No banners found. Add one to get started!
                 </div>
             </div>
         </main>

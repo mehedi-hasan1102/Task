@@ -21,9 +21,10 @@ const isLocalhost = window.location.hostname === 'localhost' ||
     window.location.hostname.startsWith('172.') ||
     window.location.protocol === 'file:';
 
+// In production, default to current origin so single-service deploys work without extra config.
 const BACKEND_URL = isLocalhost
     ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : `${window.location.protocol}//${window.location.hostname}:3000`)
-    : (window.ENV_BACKEND_URL || 'https://school-management-backend.onrender.com');
+    : (window.ENV_BACKEND_URL || window.location.origin);
 
 const API_BASE_URL = `${BACKEND_URL}/api`;
 let socket;
